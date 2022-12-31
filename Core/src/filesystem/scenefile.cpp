@@ -322,7 +322,7 @@ namespace Fury {
 #ifdef EDITOR_MODE
 		cameraComp->init(ent->transform, 1024, 768); // burasi degisecek, editor icin calisiyor sadece. game tarafi ? henuz netlik yok...
 #else
-		cameraComp->init(Core::instance->glfwContext->mode->width, Core::instance->glfwContext->mode->height);
+		cameraComp->init(ent->transform, Core::instance->glfwContext->mode->width, Core::instance->glfwContext->mode->height);
 #endif
 
 		return true;

@@ -61,7 +61,6 @@ namespace Fury {
 
 	void FileSystem::onUpdate() {
 
-		// ToDo: make it in other thread ?? there are dependencies...
 		if (frameCounter % 300 == 0) {
 
 			bool change = false;
@@ -479,11 +478,8 @@ namespace Fury {
 		if (!std::filesystem::exists(assetsPath))
 			std::filesystem::create_directory(assetsPath);
 
-		if (std::filesystem::exists(fileDBPath)) {
-
+		if (std::filesystem::exists(fileDBPath))
 			FileSystem::readDBFile(fileDBPath);
-			//idCounter++;
-		}
 		else {
 
 			rapidxml::xml_document<> doc;
@@ -514,144 +510,22 @@ namespace Fury {
 
 		rapidxml::xml_node<>* files_node = doc.first_node("Files");
 
+		int max = -1;
 		for (rapidxml::xml_node<>* fileNode = files_node->first_node("File"); fileNode; fileNode = fileNode->next_sibling()) {
 
 			std::string filePath = fileNode->first_attribute("Path")->value();
-			unsigned int id = atoi(fileNode->first_attribute("Id")->value());			
+			int id = atoi(fileNode->first_attribute("Id")->value());			
 			filePathToId[filePath] = id;
 
-			if (idCounter < id)
-				idCounter = id + 1;
+			if (max < id)
+				max = id;
 		}
-
-		//int stage = 0;
-		//int stage2Counter = 0;
-
-		//while (getline(dbFile, line)) {
-
-		//	if (line == "IdToPath") {
-		//		stage = 0;
-		//		continue;
-		//	}
-		//	else if (line == "PathToId") {
-		//		stage = 1;
-		//		continue;
-		//	}
-		//	else if (line == "Hierarchy") {
-		//		stage = 2;
-		//		continue;
-		//	}
-
-		//	if (stage == 0) {
-
-		//		std::istringstream ss(line);
-		//		std::string word;
-		//		std::vector<std::string> words;
-		//		while (ss >> word)
-		//			words.push_back(word);
-		//		fileIdToPath[std::stoi(words[0])] = words[1];
-		//	}
-
-		//	if (stage == 1) {
-
-		//		std::istringstream ss(line);
-		//		std::string word;
-		//		std::vector<std::string> words;
-		//		while (ss >> word)
-		//			words.push_back(word);
-		//		filePathToId[words[0]] = std::stoi(words[1]);
-		//	}
-
-		//	if (stage == 2) {
-
-		//		std::istringstream ss(line);
-		//		std::string word;
-		//		std::vector<int> fileIds;
-		//		while (ss >> word)
-		//			fileIds.push_back(std::stoi(word));
-
-		//		if (stage2Counter != 0) {
-
-		//			File* parent = files[fileIds[0]];
-
-		//			//if exists!
-		//			std::filesystem::path path(fileIdToPath[parent->id]);
-		//			//if (std::filesystem::exists(path)) {
-
-		//			//}
-
-		//			for (int i = 1; i < fileIds.size(); i++) {
-
-		//				int id = fileIds[i];
-		//				std::filesystem::path path(fileIdToPath[id]);
-		//				File* child = FileSystem::createNewFile(parent, id, path);
-		//				files[child->id] = child;
-		//			}
-		//		}
-		//		else {
-
-		//			rootFile = new File;
-		//			rootFile->parent = NULL;
-		//			rootFile->id = fileIds[0];
-		//			//rootFile->textureID = 0;
-		//			files[rootFile->id] = rootFile;
-
-		//			//if exists!
-		//			std::filesystem::path path(fileIdToPath[rootFile->id]);
-
-		//			rootFile->path = path.string();
-		//			rootFile->name = path.stem().string();
-		//			rootFile->extension = path.extension().string();
-		//			rootFile->type = FileType::folder;
-
-		//			for (int i = 1; i < fileIds.size(); i++) {
-
-		//				int id = fileIds[i];
-		//				std::filesystem::path path(fileIdToPath[id]);
-		//				File* child = FileSystem::createNewFile(rootFile, id, path);
-		//				files[child->id] = child;
-		//			}
-		//			stage2Counter++;
-		//		}
-		//	}
-		//}
-
+		idCounter = max + 1;
+	
 		file.close();
 	}
 
 	void FileSystem::writeDBFile(std::string path) {
-
-		/*std::ofstream dbFile(fileName);
-
-		dbFile << "IdToPath\n";
-		for (auto node : fileIdToPath) {
-			dbFile << node.first << ' ' << node.second << '\n';
-		}
-
-		dbFile << "PathToId\n";
-		for (auto node : filePathToId) {
-			dbFile << node.first << ' ' << node.second << '\n';
-		}
-		dbFile << "Hierarchy\n";
-
-		std::queue<int> que;
-		que.push(rootFile->id);
-
-		while (que.size() != 0) {
-
-			int fileId = que.front();
-			que.pop();
-			File* popped = files[fileId];
-			dbFile << fileId << ' ';
-			for (int i = 0; i < popped->subfiles.size(); i++) {
-
-				dbFile << popped->subfiles[i]->id << ' ';
-				que.push(popped->subfiles[i]->id);
-			}
-			dbFile << '\n';
-		}
-
-		dbFile.close();*/
 
 		rapidxml::xml_document<> doc;
 		rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);

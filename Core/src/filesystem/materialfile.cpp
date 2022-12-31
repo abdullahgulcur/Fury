@@ -19,6 +19,8 @@ namespace Fury {
 		FileSystem* fileSystem = Core::instance->fileSystem;
 		File* file = fileSystem->matFileToFile[this];
 
+		MaterialFile::releaseAllTexFiles();
+
 		std::vector<MeshRenderer*>& components = fileSystem->fileToMeshRendererComponents[file];
 		for (auto& comp : components)
 			comp->materialFile = NULL;
@@ -89,13 +91,15 @@ namespace Fury {
 
 			shaderTypeId = 0;
 
+			bool dirty = false;
+
 			for (rapidxml::xml_node<>* texture_node = root_node->first_node("Textures")->first_node("Texture"); texture_node; texture_node = texture_node->next_sibling()) {
 
 				unsigned int fileId = atoi(texture_node->first_attribute("fileId")->value());
 				unsigned int textureIndex = atoi(texture_node->first_attribute("index")->value());
 
 				auto fileIterator = Core::instance->fileSystem->files.find(fileId);
-				if (fileIterator != Core::instance->fileSystem->files.end()) {
+				if (fileIterator != Core::instance->fileSystem->files.end() && fileIterator->second->type == FileType::png) {
 
 					auto texFileIterator = Core::instance->fileSystem->fileToTexFile.find(fileIterator->second);
 					if (texFileIterator != Core::instance->fileSystem->fileToTexFile.end()) {
@@ -107,7 +111,15 @@ namespace Fury {
 						Core::instance->fileSystem->fileToMaterials[fileIterator->second].push_back(this);
 					}
 				}
+				else {
+					dirty = true;
+					break;
+				}
 			}
+
+			if (dirty)
+				MaterialFile::saveMaterialFile(_file);
+
 			programId = Core::instance->glewContext->loadPBRShaders(programId, "C:/Projects/Fury/Core/src/shader/PBR.vert",
 				"C:/Projects/Fury/Core/src/shader/PBR.frag", activeTextureIndices);
 			MaterialFile::createFBO(_file);
@@ -193,6 +205,41 @@ namespace Fury {
 		programId = Core::instance->glewContext->loadPBRShaders(programId, "C:/Projects/Fury/Core/src/shader/PBR.vert",
 			"C:/Projects/Fury/Core/src/shader/PBR.frag", activeTextureIndices);
 		MaterialFile::createFBO(_file);
+	}
+
+	void MaterialFile::saveMaterialFile(File* file) {
+
+		rapidxml::xml_document<> doc;
+		rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
+		decl->append_attribute(doc.allocate_attribute("version", "1.0"));
+		decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
+		doc.append_node(decl);
+
+		rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "Material");
+		rapidxml::xml_node<>* typeNode = doc.allocate_node(rapidxml::node_element, "Type");
+		typeNode->append_attribute(doc.allocate_attribute("value", "PBR"));
+		materialNode->append_node(typeNode);
+
+		rapidxml::xml_node<>* texturesNode = doc.allocate_node(rapidxml::node_element, "Textures");
+
+		for (int i = 0; i < textureFiles.size(); i++) {
+
+			File* file = Core::instance->fileSystem->texFileToFile[textureFiles[i]];
+			rapidxml::xml_node<>* texture = doc.allocate_node(rapidxml::node_element, "Texture");
+			texture->append_attribute(doc.allocate_attribute("fileId", doc.allocate_string(std::to_string(file->id).c_str())));
+			texture->append_attribute(doc.allocate_attribute("index", doc.allocate_string(std::to_string(activeTextureIndices[i]).c_str())));
+			texturesNode->append_node(texture);
+		}
+		materialNode->append_node(texturesNode);
+		doc.append_node(materialNode);
+
+		std::string xml_as_string;
+		rapidxml::print(std::back_inserter(xml_as_string), doc);
+
+		std::ofstream file_stored(file->path);
+		file_stored << doc;
+		file_stored.close();
+		doc.clear();
 	}
 
 	void MaterialFile::insertTexture(int textureIndex, File* textureFile) { //, File* file, en sondaki file kaldirilabilir
@@ -301,6 +348,15 @@ namespace Fury {
 		// ne sikko bi kisim...
 		file = Core::instance->fileSystem->matFileToFile[this];
 		MaterialFile::loadPBRShaderProgramWithTexture(file);
+	}
+
+	void MaterialFile::releaseAllTexFiles() {
+
+		for (auto& texFile : textureFiles) {
+
+			File* file = Core::instance->fileSystem->texFileToFile[texFile];
+			MaterialFile::releaseFile(file);
+		}
 	}
 
 	//void MaterialFile::load(std::string path, Core* core) {

@@ -203,6 +203,10 @@ namespace Editor {
 
 		if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete))) {
 
+			if (selectedEntity) {
+				selectedEntity->destroy();
+				selectedEntity = NULL;
+			}
 		}
 	}
 
@@ -215,6 +219,16 @@ namespace Editor {
 		Menu::renderImGui();
 
 		Menu::inputControl();
+		Menu::deleteComponentAfterRender();
+	}
+
+	void Menu::deleteComponentAfterRender() {
+
+		if (!deleteBuffer)
+			return;
+
+		selectedEntity->removeComponent(deleteBuffer);
+		deleteBuffer = NULL;
 	}
 
 	void Menu::renderImGui() {
@@ -451,14 +465,14 @@ namespace Editor {
 		//unsigned int textureId = Core::instance->scene->primaryCamera && Core::instance->scene ? Core::instance->scene->primaryCamera->textureBuffer : 0;
 		ImGui::Image((ImTextureID)textureId, content, ImVec2(0, 1), ImVec2(1, 0));
 
-		if (textureId) {
-			if (content.x != gameRegion.x || content.y != gameRegion.y) {
+		if (content.x != gameRegion.x || content.y != gameRegion.y) {
 
-				Core::instance->renderer->width = content.x;
-				Core::instance->renderer->height = content.y;
+			Core::instance->renderer->width = content.x;
+			Core::instance->renderer->height = content.y;
+			gameRegion = content;
+
+			if(Core::instance->sceneManager->currentScene && Core::instance->sceneManager->currentScene->primaryCamera)
 				Core::instance->sceneManager->currentScene->primaryCamera->resetResolution(content.x, content.y);
-				gameRegion = content;
-			}
 		}
 
 		ImGui::PopStyleVar();
@@ -621,8 +635,8 @@ namespace Editor {
 
 			if (ImGui::Selectable("   Delete")) {
 
-				selectedEntity->destroy();
-				selectedEntity = NULL; /// gerek var mi???
+				delete selectedEntity;
+				selectedEntity = NULL;
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();
@@ -845,6 +859,7 @@ namespace Editor {
 
 					if (ImGui::ImageButton((ImTextureID)startTextureId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
 
+						//Core::instance->sceneManager->currentScene->backup();
 						auto file = Core::instance->fileSystem->sceneFileToFile.find(Core::instance->fileSystem->currentSceneFile);
 						if (file != Core::instance->fileSystem->sceneFileToFile.end())
 							Core::instance->fileSystem->currentSceneFile->saveEntities(file->second->path);
@@ -2499,7 +2514,8 @@ namespace Editor {
 
 			if (ImGui::Selectable("   Remove")) {
 
-				selectedEntity->removeComponent<Component>();
+				//selectedEntity->removeComponent<Component>();
+				deleteBuffer = component;
 
 				ImGui::PopStyleColor();
 				ImGui::EndPopup();

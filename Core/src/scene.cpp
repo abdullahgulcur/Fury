@@ -62,4 +62,9 @@ namespace Fury {
 			Scene::cloneRecursively(copied->transform->children[i]->entity, entity);
 		}
 	}
+
+	void Scene::backup() {
+		
+		rootBackup = Scene::duplicate(root);
+	}
 }

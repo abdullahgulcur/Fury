@@ -41,8 +41,8 @@ namespace Fury {
 
 		GlfwContext::loadTitleBarIcon();
 
-		//glfwPollEvents();
 		glfwSetScrollCallback(GLFW_window, GlfwContext::scroll_callback);
+		glfwSetKeyCallback(GLFW_window, Core::instance->input->key_callback);
 	}
 
 	void GlfwContext::loadTitleBarIcon() {

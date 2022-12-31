@@ -86,7 +86,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>EDITOR_MODE;GLEW_STATIC;NOMINMAX;_CRT_NO_SECURE_WARNINGSWIN32;_DEBUG;CORE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLEW_STATIC;NOMINMAX;_CRT_NO_SECURE_WARNINGSWIN32;_DEBUG;CORE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -107,7 +107,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>EDITOR_MODE;GLEW_STATIC;NOMINMAX;_CRT_NO_SECURE_WARNINGSWIN32;NDEBUG;CORE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLEW_STATIC;NOMINMAX;_CRT_NO_SECURE_WARNINGSWIN32;NDEBUG;CORE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -128,7 +128,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>EDITOR_MODE;GLEW_STATIC;NOMINMAX;_CRT_NO_SECURE_WARNINGS_DEBUG;CORE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLEW_STATIC;NOMINMAX;_CRT_NO_SECURE_WARNINGS_DEBUG;CORE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -149,7 +149,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>EDITOR_MODE;GLEW_STATIC;NOMINMAX;_CRT_NO_SECURE_WARNINGSNDEBUG;CORE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLEW_STATIC;NOMINMAX;_CRT_NO_SECURE_WARNINGSNDEBUG;CORE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -561,6 +561,7 @@
     <ClInclude Include="src\include\rapidXML\rapidxml_iterators.hpp" />
     <ClInclude Include="src\include\rapidXML\rapidxml_print.hpp" />
     <ClInclude Include="src\include\rapidXML\rapidxml_utils.hpp" />
+    <ClInclude Include="src\input.h" />
     <ClInclude Include="src\meshfile.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\saveloadsystem.h" />
@@ -592,6 +593,7 @@
     <ClCompile Include="src\glfwcontext.cpp" />
     <ClCompile Include="src\include\glm\detail\glm.cpp" />
     <ClCompile Include="src\include\lodepng\lodepng.cpp" />
+    <ClCompile Include="src\input.cpp" />
     <ClCompile Include="src\meshfile.cpp" />
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\saveloadsystem.cpp" />

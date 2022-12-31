@@ -14,6 +14,9 @@ namespace Fury {
 
     void Renderer::init() {
 
+        width = Core::instance->glfwContext->mode->width;
+        height = Core::instance->glfwContext->mode->height;
+
         GlewContext* glew = Core::instance->glewContext;
 
 
@@ -174,7 +177,7 @@ namespace Fury {
             //Core::instance->glewContext->bindTexture(0x0DE1, Core::instance->scene->primaryCamera->textureBuffer);	// use the color attachment texture as the texture of the quad plane
 
             Core::instance->glewContext->activeTexture(0x84C0);
-            Core::instance->glewContext->bindTexture(0x0DE1, Core::instance->scene->primaryCamera->textureBuffer);	// use the color attachment texture as the texture of the quad plane
+            Core::instance->glewContext->bindTexture(0x0DE1, Core::instance->sceneManager->currentScene->primaryCamera->textureBuffer);	// use the color attachment texture as the texture of the quad plane
             Core::instance->glewContext->uniform1i(Core::instance->glewContext->getUniformLocation(framebufferProgramID, "screenTexture"), 0);
             Core::instance->glewContext->drawArrays(0x0004, 0, 6);
 #endif // EDITOR_MODE

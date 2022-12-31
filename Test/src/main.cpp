@@ -14,7 +14,10 @@ int main() {
 
 	Fury::Core::instance = Fury::Core::getInstance();
 	Fury::Core::instance->init();
+
+#ifndef EDITOR_MODE
 	Fury::Core::instance->startGame();
+#endif
 
 
 #ifdef EDITOR_MODE

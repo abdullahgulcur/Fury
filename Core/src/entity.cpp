@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "entity.h"
+#include "core.h"
 
 namespace Fury {
 
@@ -28,8 +29,8 @@ namespace Fury {
 			if (MeshRenderer* comp = dynamic_cast<MeshRenderer*>(it))
 			{
 				MeshRenderer* meshRendererComp = addComponent<MeshRenderer>();
-				meshRendererComp->meshFile = comp->meshFile;
-				meshRendererComp->materialFile = comp->materialFile;
+				meshRendererComp->setMeshFileOnLoad(comp->meshFile);
+				meshRendererComp->setMatFileOnLoad(comp->materialFile);
 			}
 		}
 	}

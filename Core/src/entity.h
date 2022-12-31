@@ -33,7 +33,7 @@ namespace Fury {
 		bool hasChild(Entity* entity);
 		void rename(std::string name);
 		bool attachEntity(Entity* entity);
-		Entity* duplicate();
+		//Entity* duplicate();
 		void destroy();
 
 		template <class T>

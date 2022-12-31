@@ -12,6 +12,7 @@ namespace Fury {
 		renderer = new Renderer();
 		fileSystem = new FileSystem();
 		sceneManager = new SceneManager();
+		input = new Input();
 
 		HINSTANCE hDLL = LoadLibrary("C:/Projects/Fury/x64/Debug/Game.dll");
 		if (NULL != hDLL)
@@ -23,7 +24,6 @@ namespace Fury {
 
 	void Core::init() {
 
-		//scene = new Scene();
 		renderer->init();
 		fileSystem->init();
 		sceneManager->init();

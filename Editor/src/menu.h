@@ -98,6 +98,8 @@ namespace Editor {
 
 		bool filePanelClicked = false;
 
+		Component* deleteBuffer = NULL;
+
 	public:
 
 		Entity* selectedEntity = NULL;
@@ -116,6 +118,7 @@ namespace Editor {
 		void inputControl();
 		void newFrameImGui();
 		void update();
+		void deleteComponentAfterRender();
 		void renderImGui();
 		void destroyImGui();
 		void setTheme();

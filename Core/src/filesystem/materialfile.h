@@ -34,12 +34,14 @@ namespace Fury {
 		MaterialFile(File* file);
 		//void loadPBRShaderProgramWithoutTexture(File* file);
 		void loadPBRShaderProgramWithTexture(File* file);
+		void saveMaterialFile(File* file);
 		void insertTexture(int textureIndex, File* texfile); // , File* file
 		void addMeshRendererComponentDependency(MeshRenderer* component);
 		void deleteMaterialFile();
 
 		void replaceTexFile(int index);
 		void releaseTexFile(int index);
+		void releaseAllTexFiles();
 		void releaseFile(File* file);
 		void findTexFileAndRelease(File* file);
 

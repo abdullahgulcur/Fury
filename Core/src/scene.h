@@ -16,6 +16,7 @@ namespace Fury {
 		unsigned int idCounter = 0;
 		std::string name;
 		Entity* root;
+		Entity* rootBackup;
 		std::map<unsigned int, Entity*> entityIdToEntity;
 		GameCamera* primaryCamera = NULL;
 
@@ -27,5 +28,6 @@ namespace Fury {
 		Entity* newEntity(Entity* entity, Entity* parent);
 		Entity* duplicate(Entity* entity);
 		void cloneRecursively(Entity* copied, Entity* parent);
+		void backup();
 	};
 }

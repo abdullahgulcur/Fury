@@ -6,6 +6,7 @@
 #include "scenemanager.h"
 #include "saveloadsystem.h"
 #include "renderer.h"
+#include "input.h"
 
 typedef HRESULT(CALLBACK* LPFNDLLFUNC)(UINT*);
 
@@ -26,6 +27,7 @@ namespace Fury {
 		FileSystem* fileSystem = NULL;
 		SceneManager* sceneManager = NULL;
 		Renderer* renderer = NULL;
+		Input* input = NULL;
 
 		Core();
 		void init();
