@@ -27,7 +27,8 @@ namespace Fury {
 #ifdef EDITOR_MODE
 		GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", NULL, NULL);
 #else
-		GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", monitor, NULL);
+		GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", NULL, NULL); // windowed
+		//GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", monitor, NULL); // fullscreen
 #endif // EDITOR_MODE
 
 

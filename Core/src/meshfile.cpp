@@ -14,6 +14,7 @@ namespace Fury {
         FileSystem* fileSystem = Core::instance->fileSystem;
         GlewContext* glewContext = Core::instance->glewContext;
         File* file = fileSystem->meshFileToFile[this];
+        std::vector<File*>& meshFiles = fileSystem->meshFiles;
 
         // Release mesh renderer component mesh file dependencies
         std::vector<MeshRenderer*>& components = fileSystem->fileToMeshRendererComponents[file];
@@ -21,16 +22,17 @@ namespace Fury {
             comp->meshFile = NULL;
         fileSystem->fileToMeshRendererComponents.erase(file);
 
-        glewContext->deleteRenderBuffers(1, &RBO);
+        glewContext->deleteRenderBuffers(1, &fileIconRBO);
         glewContext->deleteTextures(1, &fileTextureId);
-        glewContext->deleteFrameBuffers(1, &FBO);
+        glewContext->deleteFrameBuffers(1, &fileIconFBO);
         glewContext->deleteVertexArrays(1, &VAO);
 
-        fileSystem->meshFiles.erase(std::remove(fileSystem->meshFiles.begin(), fileSystem->meshFiles.end(), file), fileSystem->meshFiles.end());
+        meshFiles.erase(std::remove(meshFiles.begin(), meshFiles.end(), file), meshFiles.end());
         fileSystem->fileToMeshFile.erase(file);
         fileSystem->meshFileToFile.erase(this);
     }
 
+    // ref: https://learnopengl.com/Model-Loading/Model
     void MeshFile::loadModel(File* file)
     {
         // read file via ASSIMP
@@ -42,13 +44,12 @@ namespace Fury {
             std::cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
             return;
         }
-        // retrieve the directory path of the filepath
-        //directory = path.substr(0, path.find_last_of('/'));
-
+        
         // process ASSIMP's root node recursively
         processNode(file, scene->mRootNode, scene);
     }
 
+    // ref: https://learnopengl.com/Model-Loading/Model
     // processes a node in a recursive fashion. Processes each individual mesh located at the node and repeats this process on its children nodes (if any).
     void MeshFile::processNode(File* file, aiNode* node, const aiScene* scene)
     {
@@ -67,13 +68,12 @@ namespace Fury {
         }
     }
 
+    // ref: https://learnopengl.com/Model-Loading/Model
     void MeshFile::processMesh(File* file, aiMesh* mesh, const aiScene* scene)
     {
         // data to fill
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
-        std::vector<glm::vec3> points;
-        std::vector<unsigned int> indicesWireframe;
 
         /* For AABB Box boundaries */
         int minX = 99999;
@@ -83,6 +83,9 @@ namespace Fury {
         int maxY = -99999;
         int maxZ = -99999;
 
+#ifdef EDITOR_MODE
+        float radius = -1.f;
+#endif
         // walk through each of the mesh's vertices
         for (unsigned int i = 0; i < mesh->mNumVertices; i++)
         {
@@ -94,10 +97,11 @@ namespace Fury {
             vector.z = mesh->mVertices[i].z;
             vertex.position = vector;
 
-            float radius = glm::length(vector);
-            if (radius > this->radius) this->radius = radius;
-
-            points.push_back(vector);
+#ifdef EDITOR_MODE
+            float r = glm::length(vector);
+            if (r > radius)
+                radius = r;
+#endif
             // normals
             if (mesh->HasNormals())
             {
@@ -120,7 +124,6 @@ namespace Fury {
                 vertex.texCoord = glm::vec2(0.0f, 0.0f);
 
             vertices.push_back(vertex);
-
 
             /* Calculate AABB Box boundaries */
             if (vector.x > maxX)
@@ -161,45 +164,21 @@ namespace Fury {
                 indices.push_back(face.mIndices[j]);
         }
 
-        //-- Create VAO for actual mesh
+        // Create VAO for actual mesh
         Core::instance->glewContext->initVAO(VAO, vertices, indices);
         indiceCount = indices.size();
 
-        //-- Create wireframe VAO
-
-        for (int i = 0; i < indices.size(); i += 3) {
-
-            indicesWireframe.push_back(indices[i]);
-            indicesWireframe.push_back(indices[i + 1]);
-            indicesWireframe.push_back(indices[i + 1]);
-            indicesWireframe.push_back(indices[i + 2]);
-            indicesWireframe.push_back(indices[i + 2]);
-            indicesWireframe.push_back(indices[i]);
-        }
-        //wireframeIndiceCount = indicesWireframe.size();
-
-        //unsigned int VBO;
-        //unsigned int EBO;
-        //core->glewContext->genVertexArrays(1, &wireframeVAO);
-        //core->glewContext->genBuffers(1, &VBO);
-        //core->glewContext->genBuffers(1, &EBO);
-        //core->glewContext->bindVertexArray(wireframeVAO);
-        //core->glewContext->bindBuffer(0x8892, VBO);
-        //core->glewContext->bufferData(0x8892, points.size() * sizeof(glm::vec3), (void*)&points[0], 0x88E4);
-        //core->glewContext->bindBuffer(0x8893, EBO);
-        //core->glewContext->bufferData(0x8893, wireframeIndiceCount * sizeof(unsigned int), (void*)&indicesWireframe[0], 0x88E4);
-        //core->glewContext->enableVertexAttribArray(0);
-        //core->glewContext->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), (void*)0);
-        //core->glewContext->bindVertexArray(0);
-
-        //-- Create FBO for file texture id
-        MeshFile::createFBO(file);
+#ifdef EDITOR_MODE
+        // Create FBO for file texture id
+        MeshFile::createFileIconFBO(file, radius);
+#endif
     }
 
-    void MeshFile::createFBO(File* file) {
+#ifdef EDITOR_MODE
+    void MeshFile::createFileIconFBO(File* file, float radius) {
 
         GlewContext* glewContext = Core::instance->glewContext;
-        glewContext->createFrameBuffer(FBO, RBO, fileTextureId, 64, 64);
+        glewContext->createFrameBuffer(fileIconFBO, fileIconRBO, fileTextureId, 64, 64);
 
         float z = (radius * 1.2f);// *glm::sin(3.14f / 4);
         float y = (radius * 1.5f) * glm::sin(3.14f / 4);
@@ -209,7 +188,7 @@ namespace Fury {
         glm::mat4 view = glm::lookAt(camPos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
         glm::mat4 projection = glm::perspective(glm::radians(60.f), 1.f, 0.01f, 100.f);
 
-        glewContext->bindFrameBuffer(FBO);
+        glewContext->bindFrameBuffer(fileIconFBO);
         glewContext->viewport(64, 64);
         glewContext->clearScreen(glm::vec3(0.12f, 0.12f, 0.12f));
 
@@ -225,5 +204,6 @@ namespace Fury {
         glewContext->bindFrameBuffer(0);
         file->textureID = fileTextureId;
     }
+#endif
 
 }
