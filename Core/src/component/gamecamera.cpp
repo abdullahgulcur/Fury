@@ -76,6 +76,7 @@ namespace Fury {
         GameCamera::updateProjectionMatrix();
         GameCamera::recreateFBO();
         GameCamera::updateEditorGizmos();
+        GameCamera::frustum(projectionViewMatrix);
     }
 
     void GameCamera::setMatrices(Transform* transform) {
@@ -207,7 +208,7 @@ namespace Fury {
     }
 
     // ref: https://arm-software.github.io/opengl-es-sdk-for-android/terrain.html
-    bool GameCamera::intersectsAABB(glm::vec3 start, glm::vec3 end)
+    bool GameCamera::intersectsAABB(glm::vec4& start, glm::vec4& end)
     {
         // If all corners of an axis-aligned bounding box are on the "wrong side" (negative distance)
         // of at least one of the frustum planes, we can safely cull the mesh.

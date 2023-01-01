@@ -19,6 +19,11 @@ namespace Fury {
 		glm::vec2 texCoord;
 	};
 
+	struct __declspec(dllexport) AABB_Box {
+		glm::vec4 start;
+		glm::vec4 end;
+	};
+
 	// dont forget to add reference !!!
 	class __declspec(dllexport) MeshFile {
 
@@ -28,13 +33,11 @@ namespace Fury {
 
 		unsigned int VAO;
 		unsigned int indiceCount;
-
-		float radius = -1;
+		AABB_Box aabbBox;
 
 		/* For editor */
-		//unsigned int wireframeVAO;
-		//unsigned int wireframeIndiceCount;
 
+		float radius = -1;
 		unsigned int FBO;
 		unsigned int RBO;
 		unsigned int fileTextureId;

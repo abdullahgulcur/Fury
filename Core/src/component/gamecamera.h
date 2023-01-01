@@ -27,6 +27,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
+/* NOTES */
+/*
+* Frustum culling is not working properply in cases which object is scaled and rotated.
+*/
 #pragma once
 
 #include "gamecamera.h"
@@ -82,7 +86,7 @@ namespace Fury {
 		void updateViewMatrix(Transform* transform);
 		float getVerticalFOV();
 		void frustum(glm::mat4& view_projection);
-		bool intersectsAABB(glm::vec3 start, glm::vec3 end);
+		bool intersectsAABB(glm::vec4& start, glm::vec4& end);
 		void changeFovAxis(int oldFovAxis);
 		float convertFOVVerticalToHorizontal(float fovY, float aspectRatio);
 		float convertFOVHorizontalToVertical(float fovX, float aspectRatio);

@@ -20,7 +20,10 @@ namespace Fury {
 
 		unsigned int width;
 		unsigned int height;
-		//unsigned int FBO;
+
+		/*Stats*/
+		unsigned int drawCallCount;
+		//unsigned int averageFPS;
 
 		Renderer();
 		void init();

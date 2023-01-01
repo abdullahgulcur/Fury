@@ -25,6 +25,8 @@ namespace Editor {
 		unsigned int framebufferProgramID;
 		unsigned int quadVAO;
 
+		unsigned int drawCallCount;
+
 	public:
 
 		Renderer();

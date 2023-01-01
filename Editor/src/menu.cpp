@@ -393,7 +393,9 @@ namespace Editor {
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5, 5));
 		ImGui::Begin("Statistics");
+
 		ImGui::TextColored(DEFAULT_TEXT_COLOR, "%.1f FPS", ImGui::GetIO().Framerate);
+		ImGui::TextColored(DEFAULT_TEXT_COLOR, " Draw Calls %d", Core::instance->renderer->drawCallCount);
 
 		ImGui::End();
 		ImGui::PopStyleVar();

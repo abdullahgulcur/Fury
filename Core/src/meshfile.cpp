@@ -75,6 +75,13 @@ namespace Fury {
         std::vector<glm::vec3> points;
         std::vector<unsigned int> indicesWireframe;
 
+        /* For AABB Box boundaries */
+        int minX = 99999;
+        int minY = 99999;
+        int minZ = 99999;
+        int maxX = -99999;
+        int maxY = -99999;
+        int maxZ = -99999;
 
         // walk through each of the mesh's vertices
         for (unsigned int i = 0; i < mesh->mNumVertices; i++)
@@ -113,7 +120,38 @@ namespace Fury {
                 vertex.texCoord = glm::vec2(0.0f, 0.0f);
 
             vertices.push_back(vertex);
+
+
+            /* Calculate AABB Box boundaries */
+            if (vector.x > maxX)
+                maxX = vector.x;
+
+            if (vector.y > maxY)
+                maxY = vector.y;
+
+            if (vector.z > maxZ)
+                maxZ = vector.z;
+
+            if (vector.x < minX)
+                minX = vector.x;
+
+            if (vector.y < minY)
+                minY = vector.y;
+
+            if (vector.z < minZ)
+                minZ = vector.z;
         }
+
+        /* Set Box boundaries */
+        aabbBox.start.x = minX;
+        aabbBox.start.y = minY;
+        aabbBox.start.z = minZ;
+        aabbBox.start.w = 1.f;
+        aabbBox.end.x = maxX;
+        aabbBox.end.y = maxY;
+        aabbBox.end.z = maxZ;
+        aabbBox.end.w = 1.f;
+
         // now wak through each of the mesh's faces (a face is a mesh its triangle) and retrieve the corresponding vertex indices.
         for (unsigned int i = 0; i < mesh->mNumFaces; i++)
         {

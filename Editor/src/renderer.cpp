@@ -139,35 +139,94 @@ namespace Editor {
 
 	void Renderer::update() {
 
-		if (Core::instance->sceneManager->currentScene) {
+		/* reset */
+		drawCallCount = 0;
 
-			glm::mat4& VP = Editor::instance->sceneCamera->projectionViewMatrix;
+		Scene* scene = Core::instance->sceneManager->currentScene;
+		SceneCamera* camera = Editor::instance->sceneCamera;
 
-			Core::instance->glewContext->bindFrameBuffer(Editor::instance->sceneCamera->FBO);
+		if (scene) {
+
+			GlewContext* glew = Core::instance->glewContext;
+
+			glm::mat4& VP = camera->projectionViewMatrix;
+			glm::vec3& camPos = camera->position;
+
+			Core::instance->glewContext->bindFrameBuffer(camera->FBO);
+			glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
 			Core::instance->glewContext->viewport(Editor::instance->menu->sceneRegion.x, Editor::instance->menu->sceneRegion.y);
 			Core::instance->glewContext->clearScreen(glm::vec3(0.3f, 0.3f, 0.3f));
 
-			for (int i = 0; i < Core::instance->sceneManager->currentScene->root->transform->children.size(); i++)
-				Renderer::drawMeshRendererRecursively(Core::instance->sceneManager->currentScene->root->transform->children[i]->entity,
-					Editor::instance->sceneCamera->projectionViewMatrix, Editor::instance->sceneCamera->position);
+			std::stack<Entity*> entStack;
+			entStack.push(Core::instance->sceneManager->currentScene->root);
+
+			while (!entStack.empty()) {
+
+				Entity* popped = entStack.top();
+				entStack.pop();
+
+				/* Gizmo Part */
+				GameCamera* gamecamera = popped->getComponent<GameCamera>();
+				if (gamecamera != NULL && Editor::instance->menu->selectedEntity == popped) // bunu ayir
+					gamecamera->drawEditorGizmos(VP, popped->transform->model);
+				/* Gizmo Part End*/
+
+				for (Transform*& child : popped->transform->children)
+					entStack.push(child->entity);
+
+				MeshRenderer* renderer = popped->getComponent<MeshRenderer>();
+				if (!renderer)
+					continue;
+
+				MeshFile* mesh = renderer->meshFile;
+				MaterialFile* mat = renderer->materialFile;
+				if (!mesh || !mat)
+					continue;
+
+				glm::mat4 model = popped->transform->model;
+				glm::vec4 startInWorldSpace = model * mesh->aabbBox.start;
+				glm::vec4 endInWorldSpace = model * mesh->aabbBox.end;
+
+				if (!camera->intersectsAABB(startInWorldSpace, endInWorldSpace))
+					continue;
+
+				unsigned int programId = mat->programId;
+				glew->useProgram(programId);
+				glew->uniform3fv(glew->getUniformLocation(programId, "camPos"), 1, &camPos[0]);
+				glew->uniformMatrix4fv(glew->getUniformLocation(programId, "PV"), 1, 0, &VP[0][0]);
+				glew->uniformMatrix4fv(glew->getUniformLocation(programId, "model"), 1, 0, &model[0][0]);
+
+				if (mat->shaderTypeId == 0) {
+
+					for (int i = 0; i < mat->activeTextureIndices.size(); i++) {
+
+						std::string texStr = "texture" + std::to_string(mat->activeTextureIndices[i]);
+						glew->activeTexture(0x84C0 + i);
+						glew->bindTexture(0x0DE1, mat->textureFiles[i]->textureId);
+						glew->uniform1i(glew->getUniformLocation(programId, &texStr[0]), i);
+					}
+				}
+
+				glew->bindVertexArray(mesh->VAO);
+				glew->drawElements(0x0004, mesh->indiceCount, 0x1405, (void*)0);
+				glew->bindVertexArray(0);
+
+				drawCallCount++;
+			}
 
 			Core::instance->glewContext->bindFrameBuffer(0);
 		}
+		//if (Core::instance->sceneManager->currentScene) {
 
+		//	glm::mat4& VP = Editor::instance->sceneCamera->projectionViewMatrix;
 
-		//if (Core::instance->scene && Core::instance->scene->primaryCamera) {
-
-		//	glm::mat4& VP = Core::instance->scene->primaryCamera->projectionViewMatrix;
-
-		//	Core::instance->glewContext->bindFrameBuffer(Core::instance->scene->primaryCamera->FBO);
-
-		//	Core::instance->glewContext->viewport(Editor::instance->menu->gameRegion.x, Editor::instance->menu->gameRegion.y);
-
+		//	Core::instance->glewContext->bindFrameBuffer(Editor::instance->sceneCamera->FBO);
+		//	Core::instance->glewContext->viewport(Editor::instance->menu->sceneRegion.x, Editor::instance->menu->sceneRegion.y);
 		//	Core::instance->glewContext->clearScreen(glm::vec3(0.3f, 0.3f, 0.3f));
 
-		//	for (int i = 0; i < Core::instance->scene->root->transform->children.size(); i++)
-		//		Renderer::drawMeshRendererRecursively(Core::instance->scene->root->transform->children[i]->entity,
-		//			Core::instance->scene->primaryCamera->projectionViewMatrix, Core::instance->scene->primaryCamera->position);
+		//	for (int i = 0; i < Core::instance->sceneManager->currentScene->root->transform->children.size(); i++)
+		//		Renderer::drawMeshRendererRecursively(Core::instance->sceneManager->currentScene->root->transform->children[i]->entity,
+		//			Editor::instance->sceneCamera->projectionViewMatrix, Editor::instance->sceneCamera->position);
 
 		//	Core::instance->glewContext->bindFrameBuffer(0);
 		//}
@@ -514,16 +573,65 @@ namespace Editor {
 
 	Entity* Renderer::detectAndGetEntityId(float mouseX, float mouseY) {
 
+		Scene* scene = Core::instance->sceneManager->currentScene;
+		if (!scene)
+			return NULL;
+
 		GlewContext* glew = Core::instance->glewContext;
 
 		glew->bindFrameBuffer(0x8D40, Editor::instance->sceneCamera->FBO);
 		glew->viewport(0, 0, (int)Editor::instance->menu->sceneRegion.x, (int)Editor::instance->menu->sceneRegion.y);
-		glew->clearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glew->clearColor(0.3f, 0.3f, 0.3f, 1.0f);
 		glew->clear(0x00004000 | 0x00000100);
 		glew->useProgram(pickingProgramID);
 
-		for (int i = 0; i < Core::instance->sceneManager->currentScene->root->transform->children.size(); i++)
-			Renderer::drawMeshRendererForPickingRecursively(Core::instance->sceneManager->currentScene->root->transform->children[i]->entity);
+		SceneCamera* camera = Editor::instance->sceneCamera;
+		glm::mat4& PV = camera->projectionViewMatrix;
+		glm::vec3& camPos = camera->position;
+
+		std::stack<Entity*> entStack;
+		entStack.push(Core::instance->sceneManager->currentScene->root);
+
+		while (!entStack.empty()) {
+
+			Entity* popped = entStack.top();
+			entStack.pop();
+
+			for (Transform*& child : popped->transform->children)
+				entStack.push(child->entity);
+
+			MeshRenderer* renderer = popped->getComponent<MeshRenderer>();
+			if (!renderer)
+				continue;
+
+			MeshFile* mesh = renderer->meshFile;
+			MaterialFile* mat = renderer->materialFile;
+			if (!mesh || !mat)
+				continue;
+
+			glm::mat4 model = popped->transform->model;
+			glm::vec4 startInWorldSpace = model * mesh->aabbBox.start;
+			glm::vec4 endInWorldSpace = model * mesh->aabbBox.end;
+
+			if (!camera->intersectsAABB(startInWorldSpace, endInWorldSpace))
+				continue;
+
+			glew->uniformMatrix4fv(glew->getUniformLocation(pickingProgramID, "PV"), 1, 0, &PV[0][0]);
+			glew->uniformMatrix4fv(glew->getUniformLocation(pickingProgramID, "model"), 1, 0, &model[0][0]);
+
+			int r = (popped->id & 0x000000FF) >> 0;
+			int g = (popped->id & 0x0000FF00) >> 8;
+			int b = (popped->id & 0x00FF0000) >> 16;
+
+			glew->uniform4f(glew->getUniformLocation(pickingProgramID, "pickingColor"), r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+
+			glew->bindVertexArray(renderer->meshFile->VAO);
+			glew->drawElements(0x0004, renderer->meshFile->indiceCount, 0x1405, (void*)0);
+			glew->bindVertexArray(0);
+		}
+
+		/*for (int i = 0; i < Core::instance->sceneManager->currentScene->root->transform->children.size(); i++)
+			Renderer::drawMeshRendererForPickingRecursively(Core::instance->sceneManager->currentScene->root->transform->children[i]->entity);*/
 
 		// Wait until all the pending drawing commands are really done.
 		// Ultra-mega-over slow ! 
