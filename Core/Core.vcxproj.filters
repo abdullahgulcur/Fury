@@ -1152,7 +1152,7 @@
     <ClInclude Include="src\include\assimp\ZipArchiveIOSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\meshfile.h">
+    <ClInclude Include="src\filesystem\meshfile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\assimp\config.h">
@@ -1244,7 +1244,7 @@
     <ClCompile Include="src\glewcontext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\meshfile.cpp">
+    <ClCompile Include="src\filesystem\meshfile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\include\lodepng\lodepng.cpp">

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "meshfile.h"
+#include "filesystem/meshfile.h"
 #include "component/component.h"
 #include "filesystem/materialfile.h"
 

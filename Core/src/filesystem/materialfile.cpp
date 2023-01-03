@@ -48,49 +48,11 @@ namespace Fury {
 		doc.parse<0>(&buffer[0]);
 
 		root_node = doc.first_node("Material");
-		const char* shaderType = root_node->first_node("Type")->first_attribute("value")->value();
+		std::string shaderType = root_node->first_node("Type")->first_attribute("value")->value();
 
-		//if (std::strcmp(shaderType, "PBR") == 0) {
-
-		//	shaderTypeId = 0;
-		//	programId = Core::instance->fileSystem->pbrMaterialNoTexture->programId;
-		//	fileTextureId = Core::instance->fileSystem->pbrMaterialNoTexture->fileTextureId;
-		//	FBO = Core::instance->fileSystem->pbrMaterialNoTexture->FBO;
-		//	RBO = Core::instance->fileSystem->pbrMaterialNoTexture->RBO;
-		//	_file->textureID = fileTextureId;
-		//}
-		//else if (std::strcmp(shaderType, "PBR_With_Texture") == 0) {
-
-		//	shaderTypeId = 1;
-
-		//	for (rapidxml::xml_node<>* texture_node = root_node->first_node("Textures")->first_node("Texture"); texture_node; texture_node = texture_node->next_sibling()) {
-
-		//		unsigned int fileId = atoi(texture_node->first_attribute("fileId")->value());
-		//		unsigned int textureIndex = atoi(texture_node->first_attribute("index")->value());
-		//		
-		//		auto fileIterator = Core::instance->fileSystem->files.find(fileId);
-		//		if (fileIterator != Core::instance->fileSystem->files.end()) {
-		//			
-		//			auto texFileIterator = Core::instance->fileSystem->fileToTexFile.find(fileIterator->second);
-		//			if (texFileIterator != Core::instance->fileSystem->fileToTexFile.end()) {
-		//				TextureFile* texFile = texFileIterator->second;
-		//				textureFiles.push_back(texFile);
-		//				activeTextureIndices.push_back(textureIndex);
-
-		//				// dependencies;
-		//				Core::instance->fileSystem->fileToMaterials[fileIterator->second].push_back(this);
-		//			}
-		//		}
-		//	}
-		//	programId = Core::instance->glewContext->loadPBRShaders(programId, "C:/Projects/GameEngine2/Fury/Core/src/shader/PBR.vert",
-		//		"C:/Projects/GameEngine2/Fury/Core/src/shader/PBR.frag", activeTextureIndices);
-		//	MaterialFile::createFBO(_file);
-		//}
-
-			if (std::strcmp(shaderType, "PBR") == 0) {
+		if (std::strcmp(&shaderType[0], "PBR") == 0) {
 
 			shaderTypeId = 0;
-
 			bool dirty = false;
 
 			for (rapidxml::xml_node<>* texture_node = root_node->first_node("Textures")->first_node("Texture"); texture_node; texture_node = texture_node->next_sibling()) {
@@ -110,10 +72,14 @@ namespace Fury {
 						// dependencies;
 						Core::instance->fileSystem->fileToMaterials[fileIterator->second].push_back(this);
 					}
+					else {
+						dirty = true;
+						continue;
+					}
 				}
 				else {
 					dirty = true;
-					break;
+					continue;
 				}
 			}
 

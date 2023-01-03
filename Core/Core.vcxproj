@@ -562,7 +562,7 @@
     <ClInclude Include="src\include\rapidXML\rapidxml_print.hpp" />
     <ClInclude Include="src\include\rapidXML\rapidxml_utils.hpp" />
     <ClInclude Include="src\input.h" />
-    <ClInclude Include="src\meshfile.h" />
+    <ClInclude Include="src\filesystem\meshfile.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\saveloadsystem.h" />
     <ClInclude Include="src\scene.h" />
@@ -594,7 +594,7 @@
     <ClCompile Include="src\include\glm\detail\glm.cpp" />
     <ClCompile Include="src\include\lodepng\lodepng.cpp" />
     <ClCompile Include="src\input.cpp" />
-    <ClCompile Include="src\meshfile.cpp" />
+    <ClCompile Include="src\filesystem\meshfile.cpp" />
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\saveloadsystem.cpp" />
     <ClCompile Include="src\scene.cpp" />

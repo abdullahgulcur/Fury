@@ -1,7 +1,7 @@
 #pragma once
 
 #include "glm/glm.hpp"
-#include "meshfile.h"
+#include "filesystem/meshfile.h"
 #include "component/meshrenderer.h"
 
 typedef unsigned int GLuint;

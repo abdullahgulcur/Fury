@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "meshrenderer.h"
-#include "meshfile.h"
+#include "filesystem/meshfile.h"
 #include "filesystem/materialfile.h"
 #include "core.h"
 

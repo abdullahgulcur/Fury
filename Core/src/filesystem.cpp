@@ -7,7 +7,7 @@
 #include "filesystem/materialfile.h"
 #include "filesystem/texturefile.h"
 #include "filesystem/scenefile.h"
-#include "meshfile.h"
+#include "filesystem/meshfile.h"
 #include "component/meshrenderer.h"
 #include "scene.h"
 
