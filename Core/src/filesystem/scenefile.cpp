@@ -63,8 +63,8 @@ namespace Fury {
 		if (MeshRenderer* meshRendererComp = transform->entity->getComponent<MeshRenderer>())
 			saveMeshRendererComponent(doc, entity, meshRendererComp);
 
-		//if (TerrainGenerator* terrainComp = child->entity->getComponent<TerrainGenerator>())
-		//	saveTerrainGeneratorComponent(doc, entity, terrainComp);
+		if (Terrain* terrainComp = transform->entity->getComponent<Terrain>())
+			saveTerrainComponent(doc, entity, terrainComp);
 
 		//if (Rigidbody* rigidbodyComp = child->entity->getComponent<Rigidbody>())
 		//	saveRigidbodyComponent(doc, entity, rigidbodyComp);
@@ -159,7 +159,7 @@ namespace Fury {
 			SceneFile::loadTransformComponent(ent, entityNode);
 			//SceneFile::loadLightComponent(ent, entityNode);
 			SceneFile::loadMeshRendererComponent(ent, entityNode);
-			//SceneFile::loadTerrainGeneratorComponent(ent, entityNode);
+			SceneFile::loadTerrainComponent(ent, entityNode);
 			//SceneFile::loadBoxColliderComponents(ent, entityNode);
 			//SceneFile::loadSphereColliderComponents(ent, entityNode);
 			//SceneFile::loadCapsuleColliderComponents(ent, entityNode);
@@ -325,6 +325,32 @@ namespace Fury {
 		cameraComp->init(ent->transform, Core::instance->glfwContext->mode->width, Core::instance->glfwContext->mode->height);
 #endif
 
+		return true;
+	}
+
+	bool SceneFile::saveTerrainComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Terrain* terrin) {
+
+		rapidxml::xml_node<>* terrainNode = doc.allocate_node(rapidxml::node_element, "Terrain");
+		terrainNode ->append_attribute(doc.allocate_attribute("ClipmapResolution", doc.allocate_string(std::to_string(terrin->clipmapResolution).c_str())));
+		terrainNode ->append_attribute(doc.allocate_attribute("ClipmapLevel", doc.allocate_string(std::to_string(terrin->clipmapLevel).c_str())));
+		terrainNode ->append_attribute(doc.allocate_attribute("TriangleSize", doc.allocate_string(std::to_string(terrin->triangleSize).c_str())));
+		entNode->append_node(terrainNode);
+
+		return true;
+	}
+
+	bool SceneFile::loadTerrainComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
+
+		rapidxml::xml_node<>* cameraNode = entNode->first_node("Terrain");
+
+		if (cameraNode == NULL)
+			return false;
+
+		Terrain* terrainComp = ent->addComponent<Terrain>();
+		terrainComp->clipmapResolution = atoi(cameraNode->first_attribute("ClipmapResolution")->value());
+		terrainComp->clipmapLevel = atoi(cameraNode->first_attribute("ClipmapLevel")->value());
+		terrainComp->triangleSize = atof(cameraNode->first_attribute("TriangleSize")->value());
+		terrainComp->init();
 		return true;
 	}
 

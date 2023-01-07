@@ -32,12 +32,12 @@ namespace Fury {
 		MaterialFile();
 		~MaterialFile();
 		MaterialFile(File* file);
-		//void loadPBRShaderProgramWithoutTexture(File* file);
-		void loadPBRShaderProgramWithTexture(File* file);
-		void saveMaterialFile(File* file);
+		void updatePBRMaterial(File* file);
+		void savePBRMaterial(File* file);
 		void insertTexture(int textureIndex, File* texfile); // , File* file
-		void addMeshRendererComponentDependency(MeshRenderer* component);
-		void deleteMaterialFile();
+
+		void initPBRMaterial(rapidxml::xml_node<>* root_node, File* file);
+
 
 		void replaceTexFile(int index);
 		void releaseTexFile(int index);
@@ -46,7 +46,7 @@ namespace Fury {
 		void findTexFileAndRelease(File* file);
 
 		/* For editor */
-		void createFBO(File* file);
+		void createFileIcon(File* file);
 		void createFBO();
 	};
 }

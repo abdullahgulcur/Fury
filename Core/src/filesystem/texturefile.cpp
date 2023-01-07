@@ -1,12 +1,18 @@
 #include "pch.h"
 #include "texturefile.h"
 #include "core.h"
+#include <chrono>
+#include <iostream>
+using namespace std::chrono;
 
 namespace Fury {
 
 	TextureFile::TextureFile(const char* imagepath) {
 
+
 		textureId = TextureFile::loadPNGTexture(imagepath);
+
+		
 	}
 
 	TextureFile::~TextureFile() {
@@ -35,7 +41,15 @@ namespace Fury {
 
 		unsigned int texture;
 
+		// start
+		auto start = high_resolution_clock::now(); 
+
 		Core::instance->glewContext->generateTexture(texture, width, height, &image[0]);
+
+		// end
+		auto stop = high_resolution_clock::now();
+		auto duration = duration_cast<microseconds>(stop - start);
+		std::cout << "Time taken by function: " << duration.count() << " microseconds" << std::endl;
 
 		return texture;
 	}

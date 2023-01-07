@@ -5,6 +5,7 @@
 
 #include "entity.h"
 #include "component/transform.h"
+#include "component/terrain.h"
 
 #include "filesystem.h"
 
@@ -30,5 +31,7 @@ namespace Fury {
 		bool loadMeshRendererComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 		bool saveGameCameraComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, GameCamera* camera);
 		bool loadGameCameraComponent(Entity* ent, rapidxml::xml_node<>* entNode);
+		bool saveTerrainComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Terrain* terrain);
+		bool loadTerrainComponent(Entity* ent, rapidxml::xml_node<>* entNode);
 	};
 }

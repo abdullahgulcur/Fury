@@ -2,6 +2,7 @@
 #include "terrain.h"
 #include "core.h"
 #include "scenemanager.h"
+#include "glewcontext.h"
 
 namespace Fury {
 
@@ -10,51 +11,53 @@ namespace Fury {
 
 	}
 
-	void Terrain::init(Core* core) {
+	void Terrain::init() {
 
-		Terrain::createHeightMap(core);
-		Terrain::createNormalMap(core);
-		Terrain::generateTerrainClipmapsVertexArrays(core);
-
+		Terrain::createHeightMap();
+		Terrain::createNormalMap();
+		Terrain::generateTerrainClipmapsVertexArrays();
 	}
 
-	void Terrain::createHeightMap(Core* core) {
+	void Terrain::createHeightMap() {
 
-		core->glewContext->genTextures(1, &elevationMapTexture);
-		core->glewContext->bindTexture(0x0DE1, elevationMapTexture);
-		core->glewContext->texParameteri(0x0DE1, 0x2802, 0x2901);
-		core->glewContext->texParameteri(0x0DE1, 0x2803, 0x2901);
-		core->glewContext->texParameteri(0x0DE1, 0x2800, 0x2601);
-		core->glewContext->texParameteri(0x0DE1, 0x2801, 0x2601);
+		GlewContext* glew = Core::instance->glewContext;
+		glew->genTextures(1, &elevationMapTexture);
+		glew->bindTexture(0x0DE1, elevationMapTexture);
+		glew->texParameteri(0x0DE1, 0x2802, 0x2901);
+		glew->texParameteri(0x0DE1, 0x2803, 0x2901);
+		glew->texParameteri(0x0DE1, 0x2800, 0x2601);
+		glew->texParameteri(0x0DE1, 0x2801, 0x2601);
 
 		// load image, create texture and generate mipmaps
 		//heights = TerrainGenerator::getFlatHeightmap(elevationMapSize);
 		heightMipMaps = Terrain::getFlatHeightmap();
 
 		//glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, elevationMapSize, elevationMapSize, 0, GL_RED, GL_FLOAT, heights);
-		core->glewContext->texImage2D(0x0DE1, 0, 0x822E, elevationMapSize, elevationMapSize, 0, 0x1903, 0x1406, heightMipMaps[0]);
-		core->glewContext->generateMipmap(0x0DE1);
+		glew->texImage2D(0x0DE1, 0, 0x822E, elevationMapSize, elevationMapSize, 0, 0x1903, 0x1406, heightMipMaps[0]);
+		glew->generateMipmap(0x0DE1);
 		//delete[] data;
 
-		programID = core->glewContext->loadShaders("C:/Projects/Fury/Core/src/shader/clipmap.vert",
+		programID = glew->loadShaders("C:/Projects/Fury/Core/src/shader/clipmap.vert",
 			"C:/Projects/Fury/Core/src/shader/clipmap.frag");
 	}
 
-	void Terrain::createNormalMap(Core* core) {
+	void Terrain::createNormalMap() {
 
-		core->glewContext->genTextures(1, &normalMapTexture);
-		core->glewContext->bindTexture(0x0DE1, normalMapTexture);
-		core->glewContext->texParameteri(0x0DE1, 0x2802, 0x2901);
-		core->glewContext->texParameteri(0x0DE1, 0x2803, 0x2901);
-		core->glewContext->texParameteri(0x0DE1, 0x2800, 0x2601);
-		core->glewContext->texParameteri(0x0DE1, 0x2801, 0x2601);
+		GlewContext* glew = Core::instance->glewContext;
+		glew->genTextures(1, &normalMapTexture);
+		glew->bindTexture(0x0DE1, normalMapTexture);
+		glew->texParameteri(0x0DE1, 0x2802, 0x2901);
+		glew->texParameteri(0x0DE1, 0x2803, 0x2901);
+		glew->texParameteri(0x0DE1, 0x2800, 0x2601);
+		glew->texParameteri(0x0DE1, 0x2801, 0x2601);
 		normals = Terrain::getNormalMap(elevationMapSize);
-		core->glewContext->texImage2D(0x0DE1, 0, 0x1907, elevationMapSize, elevationMapSize, 0, 0x1907, 0x1400, normals);
-		core->glewContext->generateMipmap(0x0DE1);
+		glew->texImage2D(0x0DE1, 0, 0x1907, elevationMapSize, elevationMapSize, 0, 0x1907, 0x1400, normals);
+		glew->generateMipmap(0x0DE1);
 	}
 
-	void Terrain::generateTerrainClipmapsVertexArrays(Core* core) {
+	void Terrain::generateTerrainClipmapsVertexArrays() {
 
+		GlewContext* glew = Core::instance->glewContext;
 		std::vector<glm::vec3> verts;
 		std::vector<glm::vec3> ringFixUpVerts;
 		std::vector<glm::vec3> ringFixUpVerts1;
@@ -169,84 +172,84 @@ namespace Fury {
 			outerDegenerateIndices.push_back(i);
 
 		// Block
-		core->glewContext->genVertexArrays(1, &blockVAO);
-		core->glewContext->bindVertexArray(blockVAO);
+		glew->genVertexArrays(1, &blockVAO);
+		glew->bindVertexArray(blockVAO);
 
 		unsigned int VBO;
-		core->glewContext->genBuffers(1, &VBO);
-		core->glewContext->bindBuffer(0x8892, VBO);
-		core->glewContext->bufferData(0x8892, verts.size() * sizeof(glm::vec3), &verts[0], 0x88E4);
-		core->glewContext->enableVertexAttribArray(0);
-		core->glewContext->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
+		glew->genBuffers(1, &VBO);
+		glew->bindBuffer(0x8892, VBO);
+		glew->bufferData(0x8892, verts.size() * sizeof(glm::vec3), &verts[0], 0x88E4);
+		glew->enableVertexAttribArray(0);
+		glew->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
 
 		unsigned int EBO;
-		core->glewContext->genBuffers(1, &EBO);
-		core->glewContext->bindBuffer(0x8893, EBO);
-		core->glewContext->bufferData(0x8893, blockIndices.size() * sizeof(unsigned int), &blockIndices[0], 0x88E4);
+		glew->genBuffers(1, &EBO);
+		glew->bindBuffer(0x8893, EBO);
+		glew->bufferData(0x8893, blockIndices.size() * sizeof(unsigned int), &blockIndices[0], 0x88E4);
 
 		// Ring Fix-up (Horizontal)
-		core->glewContext->genVertexArrays(1, &ringFixUpHorizontalVAO);
-		core->glewContext->bindVertexArray(ringFixUpHorizontalVAO);
+		glew->genVertexArrays(1, &ringFixUpHorizontalVAO);
+		glew->bindVertexArray(ringFixUpHorizontalVAO);
 
 		unsigned int ringFixUpVBO;
-		core->glewContext->genBuffers(1, &ringFixUpVBO);
-		core->glewContext->bindBuffer(0x8892, ringFixUpVBO);
-		core->glewContext->bufferData(0x8892, ringFixUpVerts.size() * sizeof(glm::vec3), &ringFixUpVerts[0], 0x88E4);
-		core->glewContext->enableVertexAttribArray(0);
-		core->glewContext->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
+		glew->genBuffers(1, &ringFixUpVBO);
+		glew->bindBuffer(0x8892, ringFixUpVBO);
+		glew->bufferData(0x8892, ringFixUpVerts.size() * sizeof(glm::vec3), &ringFixUpVerts[0], 0x88E4);
+		glew->enableVertexAttribArray(0);
+		glew->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
 
 		unsigned int ringFixUpEBO;
-		core->glewContext->genBuffers(1, &ringFixUpEBO);
-		core->glewContext->bindBuffer(0x8893, ringFixUpEBO);
-		core->glewContext->bufferData(0x8893, ringFixUpHorizontalIndices.size() * sizeof(unsigned int), &ringFixUpHorizontalIndices[0], 0x88E4);
+		glew->genBuffers(1, &ringFixUpEBO);
+		glew->bindBuffer(0x8893, ringFixUpEBO);
+		glew->bufferData(0x8893, ringFixUpHorizontalIndices.size() * sizeof(unsigned int), &ringFixUpHorizontalIndices[0], 0x88E4);
 
 		// Ring Fix-up (Vertical)
-		core->glewContext->genVertexArrays(1, &ringFixUpVerticalVAO);
-		core->glewContext->bindVertexArray(ringFixUpVerticalVAO);
+		glew->genVertexArrays(1, &ringFixUpVerticalVAO);
+		glew->bindVertexArray(ringFixUpVerticalVAO);
 
 		unsigned int ringFixUpVBO1;
-		core->glewContext->genBuffers(1, &ringFixUpVBO1);
-		core->glewContext->bindBuffer(0x8892, ringFixUpVBO1);
-		core->glewContext->bufferData(0x8892, ringFixUpVerts1.size() * sizeof(glm::vec3), &ringFixUpVerts1[0], 0x88E4);
-		core->glewContext->enableVertexAttribArray(0);
-		core->glewContext->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
+		glew->genBuffers(1, &ringFixUpVBO1);
+		glew->bindBuffer(0x8892, ringFixUpVBO1);
+		glew->bufferData(0x8892, ringFixUpVerts1.size() * sizeof(glm::vec3), &ringFixUpVerts1[0], 0x88E4);
+		glew->enableVertexAttribArray(0);
+		glew->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
 
 		unsigned int ringFixUpEBO1;
-		core->glewContext->genBuffers(1, &ringFixUpEBO1);
-		core->glewContext->bindBuffer(0x8893, ringFixUpEBO1);
-		core->glewContext->bufferData(0x8893, ringFixUpVerticalIndices.size() * sizeof(unsigned int), &ringFixUpVerticalIndices[0], 0x88E4);
+		glew->genBuffers(1, &ringFixUpEBO1);
+		glew->bindBuffer(0x8893, ringFixUpEBO1);
+		glew->bufferData(0x8893, ringFixUpVerticalIndices.size() * sizeof(unsigned int), &ringFixUpVerticalIndices[0], 0x88E4);
 
 		// Small Square
-		core->glewContext->genVertexArrays(1, &smallSquareVAO);
-		core->glewContext->bindVertexArray(smallSquareVAO);
+		glew->genVertexArrays(1, &smallSquareVAO);
+		glew->bindVertexArray(smallSquareVAO);
 
 		unsigned int smallSquareVBO;
-		core->glewContext->genBuffers(1, &smallSquareVBO);
-		core->glewContext->bindBuffer(0x8892, smallSquareVBO);
-		core->glewContext->bufferData(0x8892, smallSquareVerts.size() * sizeof(glm::vec3), &smallSquareVerts[0], 0x88E4);
-		core->glewContext->enableVertexAttribArray(0);
-		core->glewContext->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
+		glew->genBuffers(1, &smallSquareVBO);
+		glew->bindBuffer(0x8892, smallSquareVBO);
+		glew->bufferData(0x8892, smallSquareVerts.size() * sizeof(glm::vec3), &smallSquareVerts[0], 0x88E4);
+		glew->enableVertexAttribArray(0);
+		glew->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
 
 		unsigned int smallSquareEBO;
-		core->glewContext->genBuffers(1, &smallSquareEBO);
-		core->glewContext->bindBuffer(0x8893, smallSquareEBO);
-		core->glewContext->bufferData(0x8893, smallSquareIndices.size() * sizeof(unsigned int), &smallSquareIndices[0], 0x88E4);
+		glew->genBuffers(1, &smallSquareEBO);
+		glew->bindBuffer(0x8893, smallSquareEBO);
+		glew->bufferData(0x8893, smallSquareIndices.size() * sizeof(unsigned int), &smallSquareIndices[0], 0x88E4);
 
 		// Outer Degenerate
-		core->glewContext->genVertexArrays(1, &outerDegenerateVAO);
-		core->glewContext->bindVertexArray(outerDegenerateVAO);
+		glew->genVertexArrays(1, &outerDegenerateVAO);
+		glew->bindVertexArray(outerDegenerateVAO);
 
 		unsigned int outerDegenerateVBO;
-		core->glewContext->genBuffers(1, &outerDegenerateVBO);
-		core->glewContext->bindBuffer(0x8892, outerDegenerateVBO);
-		core->glewContext->bufferData(0x8892, outerDegenerateVerts.size() * sizeof(glm::vec3), &outerDegenerateVerts[0], 0x88E4);
-		core->glewContext->enableVertexAttribArray(0);
-		core->glewContext->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
+		glew->genBuffers(1, &outerDegenerateVBO);
+		glew->bindBuffer(0x8892, outerDegenerateVBO);
+		glew->bufferData(0x8892, outerDegenerateVerts.size() * sizeof(glm::vec3), &outerDegenerateVerts[0], 0x88E4);
+		glew->enableVertexAttribArray(0);
+		glew->vertexAttribPointer(0, 3, 0x1406, 0, sizeof(glm::vec3), 0);
 
 		unsigned int outerDegenerateEBO;
-		core->glewContext->genBuffers(1, &outerDegenerateEBO);
-		core->glewContext->bindBuffer(0x8893, outerDegenerateEBO);
-		core->glewContext->bufferData(0x8893, outerDegenerateIndices.size() * sizeof(unsigned int), &outerDegenerateIndices[0], 0x88E4);
+		glew->genBuffers(1, &outerDegenerateEBO);
+		glew->bindBuffer(0x8893, outerDegenerateEBO);
+		glew->bufferData(0x8893, outerDegenerateIndices.size() * sizeof(unsigned int), &outerDegenerateIndices[0], 0x88E4);
 	}
 
 	void Terrain::setBoundariesOfClipmap(const int& level, glm::vec3& start, glm::vec3& end) {

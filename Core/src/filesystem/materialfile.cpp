@@ -53,127 +53,63 @@ namespace Fury {
 		if (std::strcmp(&shaderType[0], "PBR") == 0) {
 
 			shaderTypeId = 0;
-			bool dirty = false;
-
-			for (rapidxml::xml_node<>* texture_node = root_node->first_node("Textures")->first_node("Texture"); texture_node; texture_node = texture_node->next_sibling()) {
-
-				unsigned int fileId = atoi(texture_node->first_attribute("fileId")->value());
-				unsigned int textureIndex = atoi(texture_node->first_attribute("index")->value());
-
-				auto fileIterator = Core::instance->fileSystem->files.find(fileId);
-				if (fileIterator != Core::instance->fileSystem->files.end() && fileIterator->second->type == FileType::png) {
-
-					auto texFileIterator = Core::instance->fileSystem->fileToTexFile.find(fileIterator->second);
-					if (texFileIterator != Core::instance->fileSystem->fileToTexFile.end()) {
-						TextureFile* texFile = texFileIterator->second;
-						textureFiles.push_back(texFile);
-						activeTextureIndices.push_back(textureIndex);
-
-						// dependencies;
-						Core::instance->fileSystem->fileToMaterials[fileIterator->second].push_back(this);
-					}
-					else {
-						dirty = true;
-						continue;
-					}
-				}
-				else {
-					dirty = true;
-					continue;
-				}
-			}
-
-			if (dirty)
-				MaterialFile::saveMaterialFile(_file);
-
-			programId = Core::instance->glewContext->loadPBRShaders(programId, "C:/Projects/Fury/Core/src/shader/PBR.vert",
-				"C:/Projects/Fury/Core/src/shader/PBR.frag", activeTextureIndices);
-			MaterialFile::createFBO(_file);
+			MaterialFile::initPBRMaterial(root_node, _file);
 		}
+		else if (std::strcmp(&shaderType[0], "PBR_Alpha") == 0) {
+
+			shaderTypeId = 1;
+		}
+
+		MaterialFile::createFileIcon(_file);
 	}
 
-	//void MaterialFile::loadPBRShaderProgramWithoutTexture(File* file) {
+	void MaterialFile::initPBRMaterial(rapidxml::xml_node<>* root_node, File* file) {
 
-	//	rapidxml::xml_document<> doc;
-	//	rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
-	//	decl->append_attribute(doc.allocate_attribute("version", "1.0"));
-	//	decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
-	//	doc.append_node(decl);
+		bool dirty = false;
 
-	//	rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "Material");
-	//	rapidxml::xml_node<>* typeNode = doc.allocate_node(rapidxml::node_element, "Type");
-	//	typeNode->append_attribute(doc.allocate_attribute("value", "PBR"));
-	//	materialNode->append_node(typeNode);
+		for (rapidxml::xml_node<>* texture_node = root_node->first_node("Textures")->first_node("Texture"); texture_node; texture_node = texture_node->next_sibling()) {
 
-	//	doc.append_node(materialNode);
+			unsigned int fileId = atoi(texture_node->first_attribute("fileId")->value());
+			unsigned int textureIndex = atoi(texture_node->first_attribute("index")->value());
 
-	//	std::string xml_as_string;
-	//	rapidxml::print(std::back_inserter(xml_as_string), doc);
+			auto fileIterator = Core::instance->fileSystem->files.find(fileId);
+			if (fileIterator == Core::instance->fileSystem->files.end() || fileIterator->second->type != FileType::png) {
+				dirty = true;
+				continue;
+			}
 
-	//	std::ofstream file_stored(file->path);
-	//	file_stored << doc;
-	//	file_stored.close();
-	//	doc.clear();
+			auto texFileIterator = Core::instance->fileSystem->fileToTexFile.find(fileIterator->second);
+			if (texFileIterator == Core::instance->fileSystem->fileToTexFile.end()) {
+				dirty = true;
+				continue;
+			}
 
-	//	MaterialFile::deleteMaterialFile();
+			TextureFile* texFile = texFileIterator->second;
+			textureFiles.push_back(texFile);
+			activeTextureIndices.push_back(textureIndex);
 
-	//	shaderTypeId = 0;
-	//	programId = Core::instance->fileSystem->pbrMaterialNoTexture->programId;
-	//	fileTextureId = Core::instance->fileSystem->pbrMaterialNoTexture->fileTextureId;
-	//	FBO = Core::instance->fileSystem->pbrMaterialNoTexture->FBO;
-	//	RBO = Core::instance->fileSystem->pbrMaterialNoTexture->RBO;
-	//	textureFiles.clear();
-	//	activeTextureIndices.clear();
-
-	//	file->textureID = fileTextureId;
-	//}
-
-	void MaterialFile::loadPBRShaderProgramWithTexture(File* _file) {
-
-		// --- First, save the mat file ---
-
-		rapidxml::xml_document<> doc;
-		rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
-		decl->append_attribute(doc.allocate_attribute("version", "1.0"));
-		decl->append_attribute(doc.allocate_attribute("encoding", "utf-8"));
-		doc.append_node(decl);
-
-		rapidxml::xml_node<>* materialNode = doc.allocate_node(rapidxml::node_element, "Material");
-		rapidxml::xml_node<>* typeNode = doc.allocate_node(rapidxml::node_element, "Type");
-		typeNode->append_attribute(doc.allocate_attribute("value", "PBR"));
-		materialNode->append_node(typeNode);
-
-		rapidxml::xml_node<>* texturesNode = doc.allocate_node(rapidxml::node_element, "Textures");
-
-		for (int i = 0; i < textureFiles.size(); i++) {
-
-			File* file = Core::instance->fileSystem->texFileToFile[textureFiles[i]];
-			rapidxml::xml_node<>* texture = doc.allocate_node(rapidxml::node_element, "Texture");
-			texture->append_attribute(doc.allocate_attribute("fileId", doc.allocate_string(std::to_string(file->id).c_str())));
-			texture->append_attribute(doc.allocate_attribute("index", doc.allocate_string(std::to_string(activeTextureIndices[i]).c_str())));
-			texturesNode->append_node(texture);
+			// dependencies;
+			Core::instance->fileSystem->fileToMaterials[fileIterator->second].push_back(this);
 		}
-		materialNode->append_node(texturesNode);
-		doc.append_node(materialNode);
 
-		std::string xml_as_string;
-		rapidxml::print(std::back_inserter(xml_as_string), doc);
+		if (dirty)
+			MaterialFile::savePBRMaterial(file);
 
-		std::ofstream file_stored(_file->path);
-		file_stored << doc;
-		file_stored.close();
-		doc.clear();
+		programId = Core::instance->glewContext->loadPBRShaders(programId, "C:/Projects/Fury/Core/src/shader/PBR.vert",
+			"C:/Projects/Fury/Core/src/shader/PBR.frag", activeTextureIndices);
+	}
 
-		// --- Mat file is saved ---
+	void MaterialFile::updatePBRMaterial(File* file) {
 
+		MaterialFile::savePBRMaterial(file);
 
 		shaderTypeId = 0;
 		programId = Core::instance->glewContext->loadPBRShaders(programId, "C:/Projects/Fury/Core/src/shader/PBR.vert",
 			"C:/Projects/Fury/Core/src/shader/PBR.frag", activeTextureIndices);
-		MaterialFile::createFBO(_file);
+		MaterialFile::createFileIcon(file);
 	}
 
-	void MaterialFile::saveMaterialFile(File* file) {
+	void MaterialFile::savePBRMaterial(File* file) {
 
 		rapidxml::xml_document<> doc;
 		rapidxml::xml_node<>* decl = doc.allocate_node(rapidxml::node_declaration);
@@ -208,62 +144,42 @@ namespace Fury {
 		doc.clear();
 	}
 
-	void MaterialFile::insertTexture(int textureIndex, File* textureFile) { //, File* file, en sondaki file kaldirilabilir
+	void MaterialFile::insertTexture(int textureIndex, File* textureFile) {
 
 		TextureFile* texFile = Core::instance->fileSystem->fileToTexFile[textureFile];
-		File* file = Core::instance->fileSystem->matFileToFile[this];
-		//MaterialFile* matFile = Core::instance->fileSystem->fileToMatFile[file]; // matFile this i refer ediyor.
+		File* matFile = Core::instance->fileSystem->matFileToFile[this];
 
-		if (activeTextureIndices.size() == 0) {
-			activeTextureIndices.push_back(textureIndex);
-			textureFiles.push_back(texFile);
+		for (int i = 0; i < activeTextureIndices.size(); i++) {
 
-			//---- dependencies
-			Core::instance->fileSystem->fileToMaterials[textureFile].push_back(this);
-		}
-		else {
-
-			if (std::count(activeTextureIndices.begin(), activeTextureIndices.end(), textureIndex) == 0) {
-
-				for (int i = 0; i < activeTextureIndices.size(); i++) {
-
-					if (textureIndex < activeTextureIndices[i]) {
-						activeTextureIndices.insert(activeTextureIndices.begin() + i, textureIndex);
-						textureFiles.insert(textureFiles.begin() + i, texFile);
-						MaterialFile::loadPBRShaderProgramWithTexture(file);
-
-						//---- dependencies
-						Core::instance->fileSystem->fileToMaterials[textureFile].push_back(this);
-
-						return;
-					}
-				}
-
-				activeTextureIndices.push_back(textureIndex);
-				textureFiles.push_back(texFile);
+			if (textureIndex < activeTextureIndices[i]) {
+				activeTextureIndices.insert(activeTextureIndices.begin() + i, textureIndex);
+				textureFiles.insert(textureFiles.begin() + i, texFile);
+				MaterialFile::updatePBRMaterial(matFile);
 
 				//---- dependencies
 				Core::instance->fileSystem->fileToMaterials[textureFile].push_back(this);
-
+				return;
 			}
-			else {
-				for (int i = 0; i < activeTextureIndices.size(); i++) {
-					if (activeTextureIndices[i] == textureIndex) {
+			else if (activeTextureIndices[i] == textureIndex) {
 
-						//---- dependencies
-						// release
-						//MaterialFile::replaceTexFile(i);
-						TextureFile* oldTexFile = textureFiles[i];
-						File* file = Core::instance->fileSystem->texFileToFile[oldTexFile];
-						MaterialFile::releaseFile(file);
+				TextureFile* oldTexFile = textureFiles[i];
+				textureFiles[i] = texFile;
 
-						Core::instance->fileSystem->fileToMaterials[textureFile].push_back(this);
-						textureFiles[i] = texFile;
-					}
-				}
+				//---- dependencies
+				File* file = Core::instance->fileSystem->texFileToFile[oldTexFile];
+				MaterialFile::releaseFile(file);
+				Core::instance->fileSystem->fileToMaterials[textureFile].push_back(this);
+				MaterialFile::updatePBRMaterial(matFile);
+				return;
 			}
 		}
-		MaterialFile::loadPBRShaderProgramWithTexture(file);
+
+		activeTextureIndices.push_back(textureIndex);
+		textureFiles.push_back(texFile);
+		MaterialFile::updatePBRMaterial(matFile);
+
+		//---- dependencies
+		Core::instance->fileSystem->fileToMaterials[textureFile].push_back(this);
 	}
 
 	void MaterialFile::findTexFileAndRelease(File* file) {
@@ -279,7 +195,7 @@ namespace Fury {
 
 				// ne sikko bi kisim...
 				File* f = Core::instance->fileSystem->matFileToFile[this];
-				MaterialFile::loadPBRShaderProgramWithTexture(f);
+				MaterialFile::updatePBRMaterial(f);
 				break;
 			}
 		}
@@ -313,7 +229,7 @@ namespace Fury {
 
 		// ne sikko bi kisim...
 		file = Core::instance->fileSystem->matFileToFile[this];
-		MaterialFile::loadPBRShaderProgramWithTexture(file);
+		MaterialFile::updatePBRMaterial(file);
 	}
 
 	void MaterialFile::releaseAllTexFiles() {
@@ -325,107 +241,7 @@ namespace Fury {
 		}
 	}
 
-	//void MaterialFile::load(std::string path, Core* core) {
-
-	//	std::ifstream file(path);
-
-	//	rapidxml::xml_document<> doc;
-	//	rapidxml::xml_node<>* root_node = NULL;
-
-	//	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-	//	buffer.push_back('\0');
-
-	//	doc.parse<0>(&buffer[0]);
-
-	//	root_node = doc.first_node("Material");
-	//	rapidxml::xml_node<>* sampler2DsNode = root_node->first_node("Textures");
-	//	std::map<unsigned int, File*>& files = Core::instance->fileSystem->files;
-
-	//	//1 - Push all files to the parent class's texture files. 
-	//	//2 - In the renderer, traverse all texture files and other properties of parent in an array
-	//	//3 - In ui, do the same thing in step (1)
-
-	//	//albedoTextureFile = dynamic_cast<TextureFile*>(files.find(atoi(sampler2DsNode->first_attribute("Albedo")->value()))->second);
-	//	//normalTextureFile = dynamic_cast<TextureFile*>(files.find(atoi(sampler2DsNode->first_attribute("Normal")->value()))->second);
-	//	//metallicTextureFile = dynamic_cast<TextureFile*>(files.find(atoi(sampler2DsNode->first_attribute("Metallic")->value()))->second);
-	//	//roughnessTextureFile = dynamic_cast<TextureFile*>(files.find(atoi(sampler2DsNode->first_attribute("Roughness")->value()))->second);
-	//	//aoTextureFile = dynamic_cast<TextureFile*>(files.find(atoi(sampler2DsNode->first_attribute("AmbientOcclusion")->value()))->second);
-
-	//	for (rapidxml::xml_node<>* textureFileNode = sampler2DsNode->first_node("Texture"); textureFileNode; textureFileNode = textureFileNode->next_sibling()) {
-
-	//		unsigned int fileId = atoi(textureFileNode->first_attribute("fileId")->value());
-
-	//		if (fileId != -1) {
-
-	//			File* file = files.find(fileId)->second;
-
-	//			if (file) {
-	//				TextureFile* textureFile = Core::instance->fileSystem->fileToTexFile.find(file)->second;
-	//				textureFiles.push_back(textureFile);
-	//			}
-	//			else {
-
-	//			}
-	//		}
-	//		else {
-	//			
-	//			TextureFile* textureFile = NULL;
-	//			textureFiles.push_back(textureFile);
-	//		}
-	//		//TextureFile* file = dynamic_cast<TextureFile*>(files.find(atoi(textureFileNode->first_attribute("FileId")->value()))->second);
-	//		//textureFiles.push_back(file);
-	//	}
-
-	//	//shaderFile = Core::instance->fileSystem->pbrShader;
-
-	//	//bool fileMayCorrupted = false;
-
-	//	//const char* vertFilePath = root_node->first_node("Shader")->first_attribute("Vert")->value();
-	//	//const char* fragFilePath = root_node->first_node("Shader")->first_attribute("Frag")->value();
-	//	//File* vertFileAddr = FileSystem::getVertShaderAddr(vertFilePath);
-	//	//File* fragFileAddr = FileSystem::getFragShaderAddr(fragFilePath);
-
-	//	//if (vertFileAddr == NULL) {
-
-	//	//	vertFilePath = "source/shader/Default.vert";
-	//	//	fileMayCorrupted = true;
-	//	//}
-
-	//	//if (fragFileAddr == NULL) {
-
-	//	//	fragFilePath = "source/shader/Default.frag";
-	//	//	fileMayCorrupted = true;
-	//	//}
-
-	//	//MaterialFile mat(filePtr, vertFileAddr, fragFileAddr, vertFilePath, fragFilePath, editor->scene->dirLightTransforms.size(), editor->scene->pointLightTransforms.size());
-
-	//	//if (fragFileAddr != NULL) {
-
-	//	//	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Sampler2Ds")->first_node("Texture"); texpath_node; texpath_node = texpath_node->next_sibling()) {
-
-	//	//		File* textFile = FileSystem::getTextureFileAddr(texpath_node->first_attribute("Path")->value());
-	//	//		mat.textureUnitFileAddrs.push_back(textFile);
-
-	//	//		if (textFile != NULL)
-	//	//			mat.textureUnits.push_back(textures[texpath_node->first_attribute("Path")->value()].textureID);
-	//	//		else {
-
-	//	//			mat.textureUnits.push_back(textures["whitetexture"].textureID);
-	//	//			fileMayCorrupted = true;
-	//	//		}
-	//	//	}
-
-	//	//	for (rapidxml::xml_node<>* texpath_node = root_node->first_node("Floats")->first_node("Float"); texpath_node; texpath_node = texpath_node->next_sibling())
-	//	//		mat.floatUnits.push_back(atof(texpath_node->first_attribute("Value")->value()));
-	//	//}
-
-	//	//materials.insert({ path, mat });
-
-	//	//if (fileMayCorrupted)
-	//	//	FileSystem::writeMaterialFile(path, mat);
-	//}
-
-	void MaterialFile::createFBO(File* file) {
+	void MaterialFile::createFileIcon(File* file) {
 
 		if(!FBO)// || FBO == Core::instance->fileSystem->pbrMaterialNoTexture->FBO
 			Core::instance->glewContext->createFrameBuffer(FBO, RBO, fileTextureId, 64, 64);

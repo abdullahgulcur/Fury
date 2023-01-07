@@ -1879,7 +1879,7 @@ namespace Editor {
 				//	terrainComp->init(&editor->fileSystem->materials["Default"]);
 
 				if (Terrain* terrainComp = selectedEntity->addComponent<Terrain>()) {
-					terrainComp->init(Core::instance);
+					terrainComp->init();
 				}
 			}
 
@@ -2058,17 +2058,6 @@ namespace Editor {
 
 		Menu::contextMenuPopup(comp, 0);
 
-		/*if (ImGui::ImageButton((ImTextureID)editorIcons.contextMenuTextureID, size, uv0, uv1, frame_padding, bg_col, tint_col))
-			ImGui::OpenPopup("context_menu_popup");
-
-		if (EditorGUI::contextMenuPopup(ComponentType::MeshRenderer, 0)) {
-
-			ImGui::TreePop();
-			return;
-		}*/
-
-		//ImGui::ImageButton((ImTextureID)0, size, uv0, uv1, frame_padding, bg_col, tint_col); //editorIcons.contextMenuTextureID
-
 		if (treeNodeOpen) {
 
 			ImVec2 pos = ImGui::GetCursorPos();
@@ -2090,21 +2079,8 @@ namespace Editor {
 			if (comp->meshFile == NULL)
 				meshIndex = 0;
 
-			//if (Core::instance->fileSystem->pbrMaterialNoTexture == comp->materialFile)
-			//	matIndex = 0;
 			if (comp->materialFile == NULL)
 				matIndex = 0;
-
-			/*for (auto it : Core::instance->fileSystem->meshFileToFile) {
-
-				if (it.first == comp->meshFile)
-					meshIndex = i;
-
-				meshNames[i] = it.second->name.c_str();
-				meshFiles.push_back(it.first);
-				i++;
-			}*/
-			
 
 			if (comp->meshFile) {
 				int i = 1;
@@ -2141,18 +2117,6 @@ namespace Editor {
 					i++;
 				}
 			}
-			
-
-			//i = 1;
-			//for (auto it : Core::instance->fileSystem->matFileToFile) {
-
-			//	if (it.first == comp->materialFile)
-			//		matIndex = i;
-
-			//	matNames[i] = it.second->name.c_str();
-			//	matFiles.push_back(it.first);
-			//	i++;
-			//}
 
 			ImGui::TextColored(DEFAULT_TEXT_COLOR, "Mesh        ");
 			ImGui::SameLine();
@@ -2215,7 +2179,7 @@ namespace Editor {
 		ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
 
 		ImGui::SameLine(25);
-		ImGui::Image((ImTextureID)0, size, uv0, uv1, tint_col, border_col); //editorIcons.meshrendererTextureID
+		ImGui::Image((ImTextureID)meshRendererTextureId, size, uv0, uv1, tint_col, border_col);
 		ImGui::SameLine();
 		ImGui::TextColored(DEFAULT_TEXT_COLOR, "  Terrain");
 
@@ -2223,12 +2187,12 @@ namespace Editor {
 		ImVec2 pos = ImGui::GetCursorPos();
 		ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
 
-		ImGui::ImageButton((ImTextureID)0, size, uv0, uv1, frame_padding, bg_col, tint_col); //editorIcons.contextMenuTextureID
+		if (ImGui::ImageButton((ImTextureID)contextMenuTextureId, size, uv0, uv1, frame_padding, bg_col, tint_col))
+			ImGui::OpenPopup("context_menu_popup");
+
+		Menu::contextMenuPopup(comp, 0);
 
 		if (treeNodeOpen) {
-
-			//ImVec2 pos = ImGui::GetCursorPos();
-			//ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
 
 			ImGui::TreePop();
 		}

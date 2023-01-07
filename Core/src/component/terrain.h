@@ -11,12 +11,22 @@ namespace Fury {
 
 	private:
 
+		/* FOR TEXTURE STREAMING */
+
+		// Each parcel is loaded according to camera's position.
+		// There is a hieararchical loading mechanism, SSD -> RAM -> GPU.
+		int parcelSize = 2048;
+
+		int parcelAmount = 8; //?
+		int mapSize = 16384; //?
+
+
 	public:
 
-		unsigned short clipmapResolution = 32;
+		unsigned short clipmapResolution = 16;
 		//unsigned short clipmapResolution_temp = 32;
-		unsigned short clipmapLevel = 10;
-		float triangleSize = 10.f;
+		unsigned short clipmapLevel = 4;
+		float triangleSize = 1.f;
 
 		unsigned int programID;
 		unsigned int elevationMapTexture;
@@ -51,10 +61,10 @@ namespace Fury {
 		float perlinPersistence = 0.5f;
 
 		Terrain();
-		void init(Core* core);
-		void createHeightMap(Core* core);
-		void createNormalMap(Core* core);
-		void generateTerrainClipmapsVertexArrays(Core* core);
+		void init();
+		void createHeightMap();
+		void createNormalMap();
+		void generateTerrainClipmapsVertexArrays();
 		float** getFlatHeightmap();
 		char* getNormalMap(int size);
 		void getMaxAndMinHeights(glm::vec2& bounds, const int& level, const glm::vec3& start, const glm::vec3& end);

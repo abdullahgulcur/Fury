@@ -49,7 +49,7 @@ namespace Fury {
 		void processMesh(File* file, aiMesh* mesh, const aiScene* scene);
 
 #ifdef EDITOR_MODE
-		void createFileIconFBO(File* file, float radius);
+		void createFileIcon(File* file, float radius);
 #endif
 
 	};

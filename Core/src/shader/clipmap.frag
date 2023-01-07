@@ -8,7 +8,7 @@ out vec4 FragColor;
 uniform sampler2D heightmap;
 uniform usampler2D colormap;
 
-//uniform vec3 color_d; // fucker lines
+uniform vec3 color_d; // fucker lines
 uniform vec3 lightDir;
 uniform vec3 camPos;
 //uniform vec3 lightColor;
@@ -86,7 +86,7 @@ void main(){
 //    vec3 normal = normal_00 * (1 - deltaX) * (1 - deltaY) + normal_10 * deltaX * (1 - deltaY) + normal_01 * (1 - deltaX) * deltaY + normal_11 * deltaX * deltaY;
 //
     //vec3 n = getNormalFromMap(normal.xyz, Normal);
-    vec3 color = vec3(1,1,1);
+    vec3 color = color_d;//vec3(1,1,1);
     vec3 n = Normal;
 
     vec3 ambient = 0.25 * color;

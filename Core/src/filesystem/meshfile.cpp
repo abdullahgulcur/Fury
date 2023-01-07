@@ -170,12 +170,12 @@ namespace Fury {
 
 #ifdef EDITOR_MODE
         // Create FBO for file texture id
-        MeshFile::createFileIconFBO(file, radius);
+        MeshFile::createFileIcon(file, radius);
 #endif
     }
 
 #ifdef EDITOR_MODE
-    void MeshFile::createFileIconFBO(File* file, float radius) {
+    void MeshFile::createFileIcon(File* file, float radius) {
 
         GlewContext* glewContext = Core::instance->glewContext;
         glewContext->createFrameBuffer(fileIconFBO, fileIconRBO, fileTextureId, 64, 64);

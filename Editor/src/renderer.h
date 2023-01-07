@@ -6,6 +6,7 @@ using namespace Fury;
 
 namespace Fury {
 	class Entity;
+	class GameCamera;
 }
 
 namespace Editor {
@@ -35,7 +36,7 @@ namespace Editor {
 		void initMaterialFileTextures();
 		void initMeshFileTextures();
 		void update();
-		void drawTerrain(SceneCamera* camera, Terrain* terrain);
+		void drawTerrain(SceneCamera* camera, GameCamera* gc, Terrain* terrain);
 		void drawMeshRendererRecursively(Entity* entity, glm::mat4& PV, glm::vec3& camPos);
 		Entity* detectAndGetEntityId(float mouseX, float mouseY);
 		void drawMeshRendererForPickingRecursively(Entity* entity);

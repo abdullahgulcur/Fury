@@ -87,6 +87,6 @@ namespace Fury {
 		inline void framebufferRenderbuffer(unsigned int target, unsigned int attachment, unsigned int renderbufferarget, unsigned int renderbuffer);
 		inline unsigned int checkFramebufferStatus(unsigned int target);
 		inline void deleteProgram(unsigned int program);
-
+		inline void polygonMode(unsigned int face, unsigned int mode);
 	};
 }

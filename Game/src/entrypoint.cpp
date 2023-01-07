@@ -35,6 +35,12 @@ namespace Game {
 
 		Entity* root = core->sceneManager->currentScene->root;
 
+		/* IMPORTANT NOTE */
+		/*
+		* call functions instead of updating locals.
+		* in this case updateTransform can be called inside function.
+		* better way ? probably...
+		*/
 		if (Input::getKeyDown(KeyCode::W))
 			root->transform->children[0]->localPosition.z += 0.01f;
 

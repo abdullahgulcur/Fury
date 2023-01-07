@@ -619,5 +619,9 @@ namespace Fury {
 		glDeleteProgram(program);
 	}
 
+	void GlewContext::polygonMode(unsigned int face, unsigned int mode) {
+		glPolygonMode(face, mode);
+	}
+
 
 }

@@ -2,6 +2,7 @@
 #include "renderer.h"
 #include "editor.h"
 #include "scenecamera.h"
+#include "component/gamecamera.h"
 #include "entity.h"
 #include "scene.h"
 
@@ -158,7 +159,7 @@ namespace Editor {
 			Core::instance->glewContext->clearScreen(glm::vec3(0.3f, 0.3f, 0.3f));
 
 			std::stack<Entity*> entStack;
-			entStack.push(Core::instance->sceneManager->currentScene->root);
+			entStack.push(scene->root);
 
 			while (!entStack.empty()) {
 
@@ -170,6 +171,13 @@ namespace Editor {
 				if (gamecamera != NULL && Editor::instance->menu->selectedEntity == popped) // bunu ayir
 					gamecamera->drawEditorGizmos(VP, popped->transform->model);
 				/* Gizmo Part End*/
+
+				Terrain* terrain = popped->getComponent<Terrain>();
+				if (terrain != NULL && scene->primaryCamera != NULL) {
+					glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+					Renderer::drawTerrain(Editor::instance->sceneCamera, scene->primaryCamera, terrain);
+					glew->polygonMode(GL_BACK, GL_TRIANGLES);
+				}
 
 				for (Transform*& child : popped->transform->children)
 					entStack.push(child->entity);
@@ -267,8 +275,10 @@ namespace Editor {
 			}
 		}
 
-		if (terrain != NULL)
-			Renderer::drawTerrain(Editor::instance->sceneCamera, terrain);
+		glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		if (terrain != NULL && gamecamera != NULL)
+			Renderer::drawTerrain(Editor::instance->sceneCamera, gamecamera, terrain);
+		glew->polygonMode(GL_BACK, GL_FILL);
 
 		if (gamecamera != NULL && Editor::instance->menu->selectedEntity == entity) // bunu ayir
 			gamecamera->drawEditorGizmos(PV, entity->transform->model);
@@ -278,7 +288,7 @@ namespace Editor {
 	}
 
 
-	void Renderer::drawTerrain(SceneCamera* camera, Terrain* terrain) { // GameCamera* gc, , Terrain* terrain
+	void Renderer::drawTerrain(SceneCamera* camera, GameCamera* gc, Terrain* terrain) { // GameCamera* gc, , Terrain* terrain
 
 		GlewContext* glew = Core::instance->glewContext;
 
@@ -292,8 +302,8 @@ namespace Editor {
 		float* pvAddr = &camera->projectionViewMatrix[0][0];
 
 		// Change this for debugging purposes--------
-		glm::vec3 camPos = camera->position;
-		//glm::vec3 camPos = gc->getPosition();
+		//glm::vec3 camPos = camera->position;
+		glm::vec3 camPos = gc->position;
 		//-------------------------------------------
 
 		float* lightDirAddr = &glm::normalize(-glm::vec3(1, -0.35f, -1))[0];
@@ -367,7 +377,7 @@ namespace Editor {
 					if (camera->intersectsAABB(start, end)) {
 
 						glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-						//glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 0, 1)[0]);
+						glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 0, 1)[0]);
 						glew->bindVertexArray(terrain->blockVAO);
 						glew->drawElements(0x0004, terrain->blockIndices.size(), 0x1405, 0);
 						count++;
@@ -388,7 +398,7 @@ namespace Editor {
 
 							glew->useProgram(programID);
 							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							//glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 0)[0]);
+							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 0)[0]);
 							glew->bindVertexArray(terrain->ringFixUpHorizontalVAO);
 							glew->drawElements(0x0004, terrain->ringFixUpHorizontalIndices.size(), 0x1405, 0);
 							count++;
@@ -434,7 +444,7 @@ namespace Editor {
 
 							glew->useProgram(programID);
 							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							//glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
+							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
 							glew->bindVertexArray(terrain->ringFixUpHorizontalVAO);
 							glew->drawElements(0x0004, terrain->ringFixUpHorizontalIndices.size(), 0x1405, 0);
 							count++;
@@ -478,7 +488,7 @@ namespace Editor {
 
 							glew->useProgram(programID);
 							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							//glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
+							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
 							glew->bindVertexArray(terrain->ringFixUpVerticalVAO);
 							glew->drawElements(0x0004, terrain->ringFixUpVerticalIndices.size(), 0x1405, 0);
 							count++;
@@ -521,7 +531,7 @@ namespace Editor {
 
 							glew->useProgram(programID);
 							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							//glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0.5, 0)[0]);
+							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0.5f, 0)[0]);
 							glew->bindVertexArray(terrain->ringFixUpVerticalVAO);
 							glew->drawElements(0x0004, terrain->ringFixUpVerticalIndices.size(), 0x1405, 0);
 							count++;
@@ -543,7 +553,7 @@ namespace Editor {
 
 							glew->useProgram(programID);
 							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							//glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 1, 1)[0]);
+							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 1, 1)[0]);
 							glew->bindVertexArray(terrain->smallSquareVAO);
 							glew->drawElements(0x0004, terrain->smallSquareIndices.size(), 0x1405, 0);
 							count++;
@@ -555,7 +565,7 @@ namespace Editor {
 
 						off = glm::vec3((blockOffset.x + ox + ax) * clipmapResolution, 0, (blockOffset.y + oz + az) * clipmapResolution);
 						glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-						//glUniform3fv(glGetUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0, 0)[0]);
+						glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0, 0)[0]);
 						glew->bindVertexArray(terrain->outerDegenerateVAO);
 						glew->drawElements(0x0004, terrain->outerDegenerateIndices.size(), 0x1405, 0);
 						count++;
