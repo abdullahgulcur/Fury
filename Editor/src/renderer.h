@@ -7,6 +7,7 @@ using namespace Fury;
 namespace Fury {
 	class Entity;
 	class GameCamera;
+	class GlewContext;
 }
 
 namespace Editor {
@@ -17,6 +18,9 @@ namespace Editor {
 	class Renderer {
 
 	private:
+
+		int total = 0;
+		int counter = 0;
 
 		// some default shape VAO s
 		unsigned int defaultSphereVAO;
@@ -31,12 +35,17 @@ namespace Editor {
 	public:
 
 		Renderer();
+		~Renderer();
 		void init();
 		void initDefaultSphere();
 		void initMaterialFileTextures();
 		void initMeshFileTextures();
 		void update();
 		void drawTerrain(SceneCamera* camera, GameCamera* gc, Terrain* terrain);
+	/*	void drawInternalPart(int programID, int blockVAO, int ringFixupVAO, int smallSquareVAO, int blockIndiceCount,
+			int ringFixupIndiceCount, int smallSquareIndiceCount, int clipmapResolution, 
+			glm::vec3& camPos, glm::vec3& fakeDisplacement);*/
+		void drawPartOfTerrain(GlewContext* glew, float x, float z, unsigned int programID, unsigned int indiceCount);
 		void drawMeshRendererRecursively(Entity* entity, glm::mat4& PV, glm::vec3& camPos);
 		Entity* detectAndGetEntityId(float mouseX, float mouseY);
 		void drawMeshRendererForPickingRecursively(Entity* entity);

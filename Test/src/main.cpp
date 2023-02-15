@@ -55,5 +55,7 @@ int main() {
 	Editor::Editor::instance->sceneCamera->save(Fury::Core::instance->fileSystem->getSceneCameraPath());
 #endif
 
+	delete Editor::Editor::instance->renderer;
+
 	return 0;
 }

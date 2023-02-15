@@ -5,6 +5,15 @@
 #include "component/gamecamera.h"
 #include "entity.h"
 #include "scene.h"
+#include "glm/glm.hpp"
+
+#define TERRAIN_INSTANCED_RENDERING
+
+#define RESOLUTION 16384
+#define TILE_SIZE 256
+#define MEM_TILE_ONE_SIDE 6
+
+using namespace std::chrono;
 
 namespace Editor {
 
@@ -12,40 +21,16 @@ namespace Editor {
 
 	}
 
+	Renderer::~Renderer() {
+
+		std::cout << "Average " << (float)total / counter << std::endl;
+	}
+
 	void Renderer::init() {
 
-		GlewContext* glew= Core::instance->glewContext;
-
 		Renderer::initDefaultSphere();
-
 		pickingProgramID = Core::instance->glewContext->loadShaders("C:/Projects/Fury/Editor/src/shader/ObjectPick.vert",
 			"C:/Projects/Fury/Editor/src/shader/ObjectPick.frag");
-
-		//framebufferProgramID = Core::instance->glewContext->loadShaders("C:/Projects/Fury/Editor/src/shader/framebuffer.vert",
-		//	"C:/Projects/Fury/Editor/src/shader/framebuffer.frag");
-
-
-		//float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
-		//	// positions   // texCoords
-		//	-1.0f,  1.0f,  0.0f, 1.0f,
-		//	-1.0f, -1.0f,  0.0f, 0.0f,
-		//	 1.0f, -1.0f,  1.0f, 0.0f,
-
-		//	-1.0f,  1.0f,  0.0f, 1.0f,
-		//	 1.0f, -1.0f,  1.0f, 0.0f,
-		//	 1.0f,  1.0f,  1.0f, 1.0f
-		//};
-		//// screen quad VAO
-		//unsigned int quadVAO, quadVBO;
-		//glew->genVertexArrays(1, &quadVAO);
-		//glew->genBuffers(1, &quadVBO);
-		//glew->bindVertexArray(quadVAO);
-		//glew->bindBuffer(0x8892, quadVBO);
-		//glew->bufferData(0x8892, sizeof(quadVertices), &quadVertices, 0x88E4);
-		//glew->enableVertexAttribArray(0);
-		//glew->vertexAttribPointer(0, 2, 0x1406, 0, 4 * sizeof(float), (void*)0);
-		//glew->enableVertexAttribArray(1);
-		//glew->vertexAttribPointer(1, 2, 0x1406, 0, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	}
 
 	void Renderer::initDefaultSphere() {
@@ -136,8 +121,6 @@ namespace Editor {
         glewContext->vertexAttribPointer(2, 2, stride, (void*)(6 * sizeof(float)));
 	}
 
-
-
 	void Renderer::update() {
 
 		/* reset */
@@ -174,9 +157,23 @@ namespace Editor {
 
 				Terrain* terrain = popped->getComponent<Terrain>();
 				if (terrain != NULL && scene->primaryCamera != NULL) {
-					glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+					terrain->update(); // that asshole should not stay here...
+					//glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+
+					auto start = high_resolution_clock::now();
+
 					Renderer::drawTerrain(Editor::instance->sceneCamera, scene->primaryCamera, terrain);
-					glew->polygonMode(GL_BACK, GL_TRIANGLES);
+
+					auto stop = high_resolution_clock::now();
+					auto duration = duration_cast<microseconds>(stop - start);
+
+					total += duration.count();
+					counter++;
+					//printf("Time taken by terrain draw function (instanced): %d\n", duration.count());
+					//std::cout << "Time taken by terrain draw function (instanced): " << duration.count() << " microseconds" << std::endl;
+
+					//glew->polygonMode(GL_BACK, GL_TRIANGLES);
 				}
 
 				for (Transform*& child : popped->transform->children)
@@ -288,297 +285,624 @@ namespace Editor {
 	}
 
 
+
+
 	void Renderer::drawTerrain(SceneCamera* camera, GameCamera* gc, Terrain* terrain) { // GameCamera* gc, , Terrain* terrain
 
 		GlewContext* glew = Core::instance->glewContext;
 
 		int count = 0;
-		float scale = terrain->triangleSize;
-		int level = terrain->clipmapLevel;
+		//float scale = terrain->triangleSize;
+		int level = terrain->getMaxMipLevel(RESOLUTION, TILE_SIZE);// terrain->clipmapLevel;
 		int clipmapResolution = terrain->clipmapResolution;
-		int worldSize = scale * clipmapResolution * (2 << level);
-		unsigned int elevationMapSize = terrain->elevationMapSize;
+		//int worldSize = scale * clipmapResolution * (2 << level);
+		//unsigned int elevationMapSize = terrain->elevationMapSize;
 		int programID = terrain->programID;
 		float* pvAddr = &camera->projectionViewMatrix[0][0];
 
 		// Change this for debugging purposes--------
 		//glm::vec3 camPos = camera->position;
-		glm::vec3 camPos = gc->position;
+		float fake = 1000000;
+		glm::vec3 fakeDisplacement = glm::vec3(fake, 0, fake);
+		glm::vec3 camPos = gc->position + fakeDisplacement;
 		//-------------------------------------------
 
-		float* lightDirAddr = &glm::normalize(-glm::vec3(1, -0.35f, -1))[0];
+		float* lightDirAddr = &glm::normalize(-glm::vec3(0.5, -1, 0.5))[0];
 		float* lightColAddr = &glm::vec3(1, 1, 1)[0];
 
 		int elevationMapTexture = terrain->elevationMapTexture;
-		int normalMapTexture = terrain->normalMapTexture;
+		int diffuseMapTexture = terrain->diffuseMapTexture;
+		//int normalMapTexture = terrain->normalMapTexture;
 
 		glew->useProgram(programID);
 		glew->uniformMatrix4fv(glew->getUniformLocation(programID, "PV"), 1, 0, pvAddr);
 
-		glew->uniform1i(glew->getUniformLocation(programID, "patchRes"), level);
-		glew->uniform1i(glew->getUniformLocation(programID, "mapSize"), elevationMapSize);
-		glew->uniform1i(glew->getUniformLocation(programID, "clipMapSize"), worldSize);
-		glew->uniform3fv(glew->getUniformLocation(programID, "camPos"), 1, &camPos[0]);
+		//glew->uniform1i(glew->getUniformLocation(programID, "patchRes"), level);
+
+		//glew->uniform1i(glew->getUniformLocation(programID, "mapSize"), elevationMapSize);
+		//glew->uniform1i(glew->getUniformLocation(programID, "clipMapSize"), worldSize);
+		glew->uniform3fv(glew->getUniformLocation(programID, "camPos"), 1, &camera->position[0]);
 		glew->uniform3fv(glew->getUniformLocation(programID, "lightDir"), 1, lightDirAddr);
-		glew->uniform3fv(glew->getUniformLocation(programID, "lightColor"), 1, lightColAddr);
-		glew->uniform1f(glew->getUniformLocation(programID, "triSize"), scale);
+		//glew->uniform3fv(glew->getUniformLocation(programID, "lightColor"), 1, lightColAddr);
+		//glew->uniform1f(glew->getUniformLocation(programID, "triSize"), scale);
 
 		glew->activeTexture(0x84C0);
-		glew->bindTexture(0x0DE1, elevationMapTexture);
-		glew->uniform1i(glew->getUniformLocation(programID, "heightmap"), 0);
+		glew->bindTexture(0x0DE1, diffuseMapTexture);
+		glew->uniform1i(glew->getUniformLocation(programID, "grassTex"), 0);
 
 		glew->activeTexture(0x84C1);
-		glew->bindTexture(0x0DE1, normalMapTexture);
-		glew->uniform1i(glew->getUniformLocation(programID, "normalmap"), 1);
+		//glew->bindTexture(0x0DE1, elevationMapTexture);
+		glew->bindTexture(0x8C1A, elevationMapTexture);
+		//glew->uniform1i(glew->getUniformLocation(programID, "heightmap"), 0);
+		glew->uniform1i(glew->getUniformLocation(programID, "heightmapArray"), 1);
 
-		//glm::vec2 camDistBoundaries;
-		//camDistBoundaries.x = worldSize * 0.51f; // 0.51 cok gecici bir cozum...
-		//camDistBoundaries.y = elevationMapSize - worldSize * 0.51f;
-		//camPos.x = std::clamp(camPos.x, camDistBoundaries.x, camDistBoundaries.y);
-		//camPos.z = std::clamp(camPos.z, camDistBoundaries.x, camDistBoundaries.y);
 
-		float amount = 2.f * scale;
+		//glew->activeTexture(0x84C1);
+		//glew->bindTexture(0x0DE1, normalMapTexture);
+		//glew->uniform1i(glew->getUniformLocation(programID, "normalmap"), 1);
+
+		glew->useProgram(programID);
+
+		int blockVAO = terrain->blockVAO;
+		int ringFixUpVAO = terrain->ringFixUpVAO;
+		int smallSquareVAO = terrain->smallSquareVAO;
+		int interiorTrimVAO = terrain->interiorTrimVAO;
+		int outerDegenerateVAO = terrain->outerDegenerateVAO;
+
+		int blockIndiceCount = terrain->blockIndices.size();
+		int ringFixUpIndiceCount = terrain->ringFixUpIndices.size();
+		int smallSquareIndiceCount = terrain->smallSquareIndices.size();
+		int interiorTrimIndiceCount = terrain->interiorTrimIndices.size();
+		int outerDegenerateIndiceCount = terrain->outerDegenerateIndices.size();
+		
+		//Renderer::drawInternalPart(programID, blockVAO, ringFixUpVAO, smallSquareVAO, blockIndiceCount, 
+		//	ringFixUpIndiceCount, smallSquareIndiceCount, clipmapResolution, camPos, fakeDisplacement);
+
+		// It has to be two. 
+		int patchWidth = 2;
+
+		// '4' has to be constant, because every level has 4 block at each side.
+		//int wholeClipmapRegionSize = clipmapResolution * 4 * (1 << level);
+
+		glm::vec2* blockPositions = terrain->blockPositions;
+		glm::vec2* ringFixUpPositions = terrain->ringFixUpPositions;
+		glm::vec2* interiorTrimPositions = terrain->interiorTrimPositions;
+		glm::vec2* outerDegeneratePositions = terrain->outerDegeneratePositions;
+		float* rotAmounts = terrain->rotAmounts;
+		glm::vec2 smallSquarePosition = terrain->smallSquarePosition;
+
+		/// <summary>
+		/// NE KADAR TEKRARLAMA VARSA, HEPSINI KALDIR...
+		/// </summary>
+		/// <param name="camera"></param>
+		/// <param name="gc"></param>
+		/// <param name="terrain"></param>
+
+#ifdef TERRAIN_INSTANCED_RENDERING
+
+		std::vector<TerrainVertexAttribs> instanceArray;
+
+		// BLOCKS
 
 		for (int i = 0; i < level; i++) {
 
-			float ox = int(camPos.x / (amount * (1 << i))) * (2.f / clipmapResolution);
-			float oz = int(camPos.z / (amount * (1 << i))) * (2.f / clipmapResolution);
-			float x = -((int)(ox * (clipmapResolution / 2.f)) % 2) * 4;
-			float z = -((int)(oz * (clipmapResolution / 2.f)) % 2) * 4;
-			float ax = -((int)(ox * (clipmapResolution / 2.f)) % 2) * (2.f / clipmapResolution);
-			float az = -((int)(oz * (clipmapResolution / 2.f)) % 2) * (2.f / clipmapResolution);
+			for (int j = 0; j < 12; j++) {
 
-			for (int j = -2; j < 2; j++) {
+				glm::vec4 startInWorldSpace;
+				glm::vec4 endInWorldSpace;
+				AABB_Box aabb = terrain->blockAABBs[i * 12 + j];
+				startInWorldSpace = aabb.start;
+				endInWorldSpace = aabb.end;
+				if (gc->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
 
-				for (int k = -2; k < 2; k++) {
-
-					if (i != 0) if (k == -1 || k == 0) if (j == -1 || j == 0) continue;
-
-					glm::vec2 blockOffset(j, k);
-					if (j == -1 || j == 1) blockOffset.x -= 1.f / clipmapResolution;
-					if (k == -1 || k == 1) blockOffset.y -= 1.f / clipmapResolution;
-
-					blockOffset.x += 2.f / clipmapResolution;
-					blockOffset.y += 2.f / clipmapResolution;
-
-					glm::vec3 off((blockOffset.x + ox) * clipmapResolution, 0, (blockOffset.y + oz) * clipmapResolution);
-
-					glm::vec3 start = off * scale;
-					start.y = 0;
-					glm::vec3 end = off * scale + scale * glm::vec3(clipmapResolution - 1, 0, clipmapResolution - 1);
-					end.y = 0;
-					//terrain->setBoundariesOfClipmap(i, start, end);
-					//Terrain::drawTerrainClipmapAABB(start, end, camera, editor);
-
-					glew->useProgram(programID);
-					glew->uniform1f(glew->getUniformLocation(programID, "scale"), scale);
-
-					//gc->intersectsAABB(start, end)
-					if (camera->intersectsAABB(start, end)) {
-
-						glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-						glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 0, 1)[0]);
-						glew->bindVertexArray(terrain->blockVAO);
-						glew->drawElements(0x0004, terrain->blockIndices.size(), 0x1405, 0);
-						count++;
-					}
-
-					if (j == 0) {
-
-						off = glm::vec3((blockOffset.x - 2.f / clipmapResolution + ox) * clipmapResolution, 0, (blockOffset.y + oz) * clipmapResolution);
-
-						glm::vec3 start = off * scale;
-						start.y = 0;
-						glm::vec3 end = off * scale + scale * glm::vec3(2, 0, clipmapResolution - 1);
-						end.y = 0;
-						//terrain->setBoundariesOfClipmap(0, start, end);
-						//Terrain::drawTerrainClipmapAABB(start, end, camera, editor);
-
-						if (camera->intersectsAABB(start, end)) {
-
-							glew->useProgram(programID);
-							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 0)[0]);
-							glew->bindVertexArray(terrain->ringFixUpHorizontalVAO);
-							glew->drawElements(0x0004, terrain->ringFixUpHorizontalIndices.size(), 0x1405, 0);
-							count++;
-						}
-
-
-
-						if (i == 0 && k == 0) {
-
-							off.z -= 2;
-
-							glm::vec3 start = off * scale;
-							start.y = 0;
-							glm::vec3 end = off * scale + scale * glm::vec3(2, 0, 2);
-							end.y = 0;
-							//terrain->setBoundariesOfClipmap(0, start, end);
-							//Terrain::drawTerrainClipmapAABB(start, end, i, camera, editor);
-
-							if (camera->intersectsAABB(start, end)) {
-
-								glew->useProgram(programID);
-								glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-								glew->bindVertexArray(terrain->smallSquareVAO);
-								glew->drawElements(0x0004, terrain->smallSquareIndices.size(), 0x1405, 0);
-								count++;
-							}
-
-
-						}
-					}
-					else if (j == 1) {
-
-						off = glm::vec3((blockOffset.x + 1 - 1.f / clipmapResolution + ox + x) * clipmapResolution, 0, (blockOffset.y + oz) * clipmapResolution);
-
-						glm::vec3 start = off * scale;
-						start.y = 0;
-						glm::vec3 end = off * scale + scale * glm::vec3(2, 0, clipmapResolution - 1);
-						end.y = 0;
-						//terrain->setBoundariesOfClipmap(0, start, end);
-						//Terrain::drawTerrainClipmapAABB(start, end, camera, editor);
-
-						if (camera->intersectsAABB(start, end)) {
-
-							glew->useProgram(programID);
-							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
-							glew->bindVertexArray(terrain->ringFixUpHorizontalVAO);
-							glew->drawElements(0x0004, terrain->ringFixUpHorizontalIndices.size(), 0x1405, 0);
-							count++;
-						}
-
-						if (k == 0) {
-
-							off.z -= 2;
-
-							glm::vec3 start = off * scale;
-							start.y = 0;
-							glm::vec3 end = off * scale + scale * glm::vec3(2, 0, 2);
-							end.y = 0;
-							//terrain->setBoundariesOfClipmap(0, start, end);
-							//Terrain::drawTerrainClipmapAABB(start, end, i, camera, editor);
-
-							if (camera->intersectsAABB(start, end)) {
-
-								glew->useProgram(programID);
-								glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-								glew->bindVertexArray(terrain->smallSquareVAO);
-								glew->drawElements(0x0004, terrain->smallSquareIndices.size(), 0x1405, 0);
-								count++;
-							}
-
-						}
-					}
-
-					if (k == 1) {
-
-						off = glm::vec3((blockOffset.x + ox) * clipmapResolution, 0, (blockOffset.y + 1 - 1.f / clipmapResolution + oz + z) * clipmapResolution);
-
-						glm::vec3 start = off * scale;
-						start.y = 0;
-						glm::vec3 end = off * scale + scale * glm::vec3(clipmapResolution - 1, 0, 2);
-						end.y = 0;
-						//terrain->setBoundariesOfClipmap(0, start, end);
-						//Terrain::drawTerrainClipmapAABB(start, end, camera, editor);
-
-						if (camera->intersectsAABB(start, end)) {
-
-							glew->useProgram(programID);
-							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
-							glew->bindVertexArray(terrain->ringFixUpVerticalVAO);
-							glew->drawElements(0x0004, terrain->ringFixUpVerticalIndices.size(), 0x1405, 0);
-							count++;
-						}
-
-
-						if (j == 0) {
-
-							off.x -= 2;
-
-							glm::vec3 start = off * scale;
-							start.y = 0;
-							glm::vec3 end = off * scale + scale * glm::vec3(2, 0, 2);
-							end.y = 0;
-							//terrain->setBoundariesOfClipmap(0, start, end);
-							//Terrain::drawTerrainClipmapAABB(start, end, i, camera, editor);
-
-							if (camera->intersectsAABB(start, end)) {
-
-								glew->useProgram(programID);
-								glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-								glew->bindVertexArray(terrain->smallSquareVAO);
-								glew->drawElements(0x0004, terrain->smallSquareIndices.size(), 0x1405, 0);
-								count++;
-							}
-						}
-					}
-					else if (k == 0) {
-
-						off = glm::vec3((blockOffset.x + ox) * clipmapResolution, 0, (blockOffset.y - 2.f / clipmapResolution + oz) * clipmapResolution);
-
-						glm::vec3 start = off * scale;
-						start.y = 0;
-						glm::vec3 end = off * scale + scale * glm::vec3(clipmapResolution - 1, 0, 2);
-						end.y = 0;
-						//terrain->setBoundariesOfClipmap(0, start, end);
-						//Terrain::drawTerrainClipmapAABB(start, end, camera, editor);
-
-						if (camera->intersectsAABB(start, end)) {
-
-							glew->useProgram(programID);
-							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0.5f, 0)[0]);
-							glew->bindVertexArray(terrain->ringFixUpVerticalVAO);
-							glew->drawElements(0x0004, terrain->ringFixUpVerticalIndices.size(), 0x1405, 0);
-							count++;
-						}
-					}
-
-					if (j == 1 && k == 1) {
-
-						off = glm::vec3((blockOffset.x + 1 - 1.f / clipmapResolution + ox + x) * clipmapResolution, 0, (blockOffset.y + 1 - 1.f / clipmapResolution + oz + z) * clipmapResolution);
-
-						glm::vec3 start = off * scale;
-						start.y = 0;
-						glm::vec3 end = off * scale + scale * glm::vec3(2, 0, 2);
-						end.y = 0;
-						//terrain->setBoundariesOfClipmap(0, start, end);
-						//Terrain::drawTerrainClipmapAABB(start, end, i, camera, editor);
-
-						if (camera->intersectsAABB(start, end)) {
-
-							glew->useProgram(programID);
-							glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-							glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 1, 1)[0]);
-							glew->bindVertexArray(terrain->smallSquareVAO);
-							glew->drawElements(0x0004, terrain->smallSquareIndices.size(), 0x1405, 0);
-							count++;
-						}
-
-					}
-
-					if (j == -2 && k == -2) {
-
-						off = glm::vec3((blockOffset.x + ox + ax) * clipmapResolution, 0, (blockOffset.y + oz + az) * clipmapResolution);
-						glew->uniform3fv(glew->getUniformLocation(programID, "offsetMultPatchRes"), 1, &off[0]);
-						glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0, 0)[0]);
-						glew->bindVertexArray(terrain->outerDegenerateVAO);
-						glew->drawElements(0x0004, terrain->outerDegenerateIndices.size(), 0x1405, 0);
-						count++;
-					}
+					TerrainVertexAttribs attribs;
+					attribs.level = i;
+					attribs.model = glm::mat4(1);
+					attribs.position = glm::vec2(blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y);
+					attribs.scale = (1 << i);
+					attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2) * (1 << i);
+					attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[i].x, (float)terrain->initialTexturePositions[i].z);
+					instanceArray.push_back(attribs);
 				}
 			}
-			scale *= 2;
 		}
 
-		//std::cout << "Draw call count for the terrain: " << count << std::endl;
+
+		for (int i = 0; i < 4; i++) {
+
+			TerrainVertexAttribs attribs;
+			attribs.level = 0;
+			attribs.model = glm::mat4(1);
+			attribs.position = glm::vec2(blockPositions[level * 12 + i].x, blockPositions[level * 12 + i].y);
+			attribs.scale = 1;
+			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2);
+			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[0].x, (float)terrain->initialTexturePositions[0].z);
+			instanceArray.push_back(attribs);
+		}
+
+		unsigned int instanceBuffer;
+		glew->genBuffers(1, &instanceBuffer);
+		glew->bindBuffer(0x8892, instanceBuffer);
+		glew->bufferData(0x8892, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], 0x88E4);
+
+		int size = sizeof(TerrainVertexAttribs);
+
+		glew->bindVertexArray(blockVAO);
+		glew->enableVertexAttribArray(1);
+		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
+		glew->enableVertexAttribArray(2);
+		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->enableVertexAttribArray(3);
+		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->enableVertexAttribArray(4);
+		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->enableVertexAttribArray(5);
+		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->enableVertexAttribArray(6);
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
+		glew->enableVertexAttribArray(7);																			
+		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
+		glew->enableVertexAttribArray(8);																			
+		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
+		glew->enableVertexAttribArray(9);																			
+		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribDivisor(1, 1);
+		glew->vertexAttribDivisor(2, 1);
+		glew->vertexAttribDivisor(3, 1);
+		glew->vertexAttribDivisor(4, 1);
+		glew->vertexAttribDivisor(5, 1);
+		glew->vertexAttribDivisor(6, 1);
+		glew->vertexAttribDivisor(7, 1);
+		glew->vertexAttribDivisor(8, 1);
+		glew->vertexAttribDivisor(9, 1);
+
+		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(blockIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
+
 		glew->bindVertexArray(0);
+		glew->deleteBuffers(1, &instanceBuffer);
+		instanceArray.clear();
+
+		// RING FIXUP
+
+		for (int i = 0; i < level; i++) {
+
+			glm::mat4 model = glm::mat4(1);
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i;
+			attribs.model = model;
+			
+			attribs.scale = (1 << i);
+			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2) * (1 << i);
+			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[i].x, (float)terrain->initialTexturePositions[i].z);
+
+			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 0].x, ringFixUpPositions[i * 4 + 0].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 2].x, ringFixUpPositions[i * 4 + 2].y);
+			instanceArray.push_back(attribs);
+
+			model = glm::rotate(glm::mat4(1), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+			attribs.model = model;
+
+			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 1].x, ringFixUpPositions[i * 4 + 1].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 3].x, ringFixUpPositions[i * 4 + 3].y);
+			instanceArray.push_back(attribs);
+		}
+
+		{
+			TerrainVertexAttribs attribs;
+			attribs.level = 0;
+			attribs.model = glm::mat4(1);
+			attribs.scale = 1;
+			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2);
+			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[0].x, (float)terrain->initialTexturePositions[0].z);
+
+			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 0].x, ringFixUpPositions[level * 4 + 0].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 2].x, ringFixUpPositions[level * 4 + 2].y);
+			instanceArray.push_back(attribs);
+
+			glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+			attribs.model = model;
+
+			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 1].x, ringFixUpPositions[level * 4 + 1].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 3].x, ringFixUpPositions[level * 4 + 3].y);
+			instanceArray.push_back(attribs);
+		}
+		
+		glew->genBuffers(1, &instanceBuffer);
+		glew->bindBuffer(0x8892, instanceBuffer);
+		glew->bufferData(0x8892, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], 0x88E4);
+
+		glew->bindVertexArray(ringFixUpVAO);
+		glew->bindBuffer(0x8892, instanceBuffer);
+		glew->enableVertexAttribArray(1);
+		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
+		glew->enableVertexAttribArray(2);
+		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->enableVertexAttribArray(3);
+		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->enableVertexAttribArray(4);
+		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->enableVertexAttribArray(5);
+		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->enableVertexAttribArray(6);
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
+		glew->enableVertexAttribArray(7);
+		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
+		glew->enableVertexAttribArray(8);
+		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
+		glew->enableVertexAttribArray(9);
+		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribDivisor(1, 1);
+		glew->vertexAttribDivisor(2, 1);
+		glew->vertexAttribDivisor(3, 1);
+		glew->vertexAttribDivisor(4, 1);
+		glew->vertexAttribDivisor(5, 1);
+		glew->vertexAttribDivisor(6, 1);
+		glew->vertexAttribDivisor(7, 1);
+		glew->vertexAttribDivisor(8, 1);
+		glew->vertexAttribDivisor(9, 1);
+
+		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(ringFixUpIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
+
+		glew->bindVertexArray(0);
+		glew->deleteBuffers(1, &instanceBuffer);
+		instanceArray.clear();
+
+		// INTERIOR TRIM
+
+		for (int i = 0; i < level; i++) {
+
+			glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(rotAmounts[i]), glm::vec3(0.0f, 1.0f, 0.0f));
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i;
+			attribs.model = model;
+			attribs.scale = (2 << i);
+			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2) * (1 << i);
+			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[i].x, (float)terrain->initialTexturePositions[i].z);
+			attribs.position = glm::vec2(interiorTrimPositions[i].x, interiorTrimPositions[i].y);
+			instanceArray.push_back(attribs);
+		}
+
+		glew->genBuffers(1, &instanceBuffer);
+		glew->bindBuffer(0x8892, instanceBuffer);
+		glew->bufferData(0x8892, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], 0x88E4);
+
+		glew->bindVertexArray(interiorTrimVAO);
+		glew->bindBuffer(0x8892, instanceBuffer);
+		glew->enableVertexAttribArray(1);
+		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
+		glew->enableVertexAttribArray(2);
+		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->enableVertexAttribArray(3);
+		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->enableVertexAttribArray(4);
+		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->enableVertexAttribArray(5);
+		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->enableVertexAttribArray(6);
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
+		glew->enableVertexAttribArray(7);
+		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
+		glew->enableVertexAttribArray(8);
+		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
+		glew->enableVertexAttribArray(9);
+		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribDivisor(1, 1);
+		glew->vertexAttribDivisor(2, 1);
+		glew->vertexAttribDivisor(3, 1);
+		glew->vertexAttribDivisor(4, 1);
+		glew->vertexAttribDivisor(5, 1);
+		glew->vertexAttribDivisor(6, 1);
+		glew->vertexAttribDivisor(7, 1);
+		glew->vertexAttribDivisor(8, 1);
+		glew->vertexAttribDivisor(9, 1);
+
+		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(interiorTrimIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
+
+		glew->bindVertexArray(0);
+		glew->deleteBuffers(1, &instanceBuffer);
+		instanceArray.clear();
+
+		// OUTER DEGENERATE
+
+		for (int i = 0; i < level; i++) {
+
+			glm::mat4 model = glm::mat4(1);
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i;
+			attribs.model = model;
+			attribs.scale = (1 << i);
+			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2) * (1 << i);
+			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[i].x, (float)terrain->initialTexturePositions[i].z);
+
+			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 0].x, outerDegeneratePositions[i * 4 + 0].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 1].x, outerDegeneratePositions[i * 4 + 1].y);
+			instanceArray.push_back(attribs);
+
+			model = glm::rotate(glm::mat4(1), glm::radians(-90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 2].x, outerDegeneratePositions[i * 4 + 2].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 3].x, outerDegeneratePositions[i * 4 + 3].y);
+			instanceArray.push_back(attribs);
+		}
+
+		glew->genBuffers(1, &instanceBuffer);
+		glew->bindBuffer(0x8892, instanceBuffer);
+		glew->bufferData(0x8892, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], 0x88E4);
+
+		glew->bindVertexArray(outerDegenerateVAO);
+		glew->bindBuffer(0x8892, instanceBuffer);
+		glew->enableVertexAttribArray(1);
+		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
+		glew->enableVertexAttribArray(2);
+		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->enableVertexAttribArray(3);
+		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->enableVertexAttribArray(4);
+		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->enableVertexAttribArray(5);
+		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->enableVertexAttribArray(6);
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
+		glew->enableVertexAttribArray(7);
+		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
+		glew->enableVertexAttribArray(8);
+		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
+		glew->enableVertexAttribArray(9);
+		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribDivisor(1, 1);
+		glew->vertexAttribDivisor(2, 1);
+		glew->vertexAttribDivisor(3, 1);
+		glew->vertexAttribDivisor(4, 1);
+		glew->vertexAttribDivisor(5, 1);
+		glew->vertexAttribDivisor(6, 1);
+		glew->vertexAttribDivisor(7, 1);
+		glew->vertexAttribDivisor(8, 1);
+		glew->vertexAttribDivisor(9, 1);
+
+		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(outerDegenerateIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
+
+		glew->bindVertexArray(0);
+		glew->deleteBuffers(1, &instanceBuffer);
+		instanceArray.clear();
+
+		// SMALL SQUARE
+
+		TerrainVertexAttribs attribs;
+		attribs.level = 0;
+		attribs.model = glm::mat4(1);
+		attribs.scale = 1;
+		attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2);
+		attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[0].x, (float)terrain->initialTexturePositions[0].z);
+
+		attribs.position = glm::vec2(smallSquarePosition.x, smallSquarePosition.y);
+		instanceArray.push_back(attribs);
+
+		glew->genBuffers(1, &instanceBuffer);
+		glew->bindBuffer(0x8892, instanceBuffer);
+		glew->bufferData(0x8892, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], 0x88E4);
+
+		glew->bindVertexArray(smallSquareVAO);
+		glew->enableVertexAttribArray(1);
+		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
+		glew->enableVertexAttribArray(2);
+		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->enableVertexAttribArray(3);
+		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->enableVertexAttribArray(4);
+		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->enableVertexAttribArray(5);
+		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->enableVertexAttribArray(6);
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
+		glew->enableVertexAttribArray(7);
+		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
+		glew->enableVertexAttribArray(8);
+		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
+		glew->enableVertexAttribArray(9);
+		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribDivisor(1, 1);
+		glew->vertexAttribDivisor(2, 1);
+		glew->vertexAttribDivisor(3, 1);
+		glew->vertexAttribDivisor(4, 1);
+		glew->vertexAttribDivisor(5, 1);
+		glew->vertexAttribDivisor(6, 1);
+		glew->vertexAttribDivisor(7, 1);
+		glew->vertexAttribDivisor(8, 1);
+		glew->vertexAttribDivisor(9, 1);
+
+		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(smallSquareIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
+
+		glew->bindVertexArray(0);
+		glew->deleteBuffers(1, &instanceBuffer);
+		instanceArray.clear();
+
+#endif
+
+#ifndef TERRAIN_INSTANCED_RENDERING 
 
 
+		for (int i = 0; i < level; i++) {
+
+			glew->uniform1f(glew->getUniformLocation(programID, "texSize"), TILE_SIZE * (MEM_TILE_ONE_SIDE - 2) * (1 << i));
+			glew->uniform1i(glew->getUniformLocation(programID, "level"), i);
+			glew->uniform2f(glew->getUniformLocation(programID, "texturePos"), (float)terrain->initialTexturePositions[i].x, (float)terrain->initialTexturePositions[i].z);
+			//glew->uniform2f(glew->getUniformLocation(programID, "texturePos"), (float)terrain->currentTileIndices[i].x * TILE_SIZE * (1 << i), (float)terrain->currentTileIndices[i].z * TILE_SIZE * (1 << i));
+
+			// BLOCKS
+			glew->uniform1f(glew->getUniformLocation(programID, "scale"), 1 << i);
+			glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 0, 1)[0]);
+			glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &glm::mat4(1)[0][0]);
+			glew->bindVertexArray(blockVAO);
+
+			for (int j = 0; j < 12; j++) {
+
+				glm::vec4 startInWorldSpace;
+				glm::vec4 endInWorldSpace;
+				AABB_Box aabb = terrain->blockAABBs[i * 12 + j];
+				startInWorldSpace = aabb.start;
+				endInWorldSpace = aabb.end;
+				if (gc->intersectsAABB(startInWorldSpace, endInWorldSpace))
+					Renderer::drawPartOfTerrain(glew, blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y, programID, blockIndiceCount);
+			}
+
+			// RING FIXUP
+			glew->bindVertexArray(ringFixUpVAO);
+			//glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
+
+			Renderer::drawPartOfTerrain(glew, ringFixUpPositions[i * 4 + 0].x, ringFixUpPositions[i * 4 + 0].y, programID, ringFixUpIndiceCount);
+			Renderer::drawPartOfTerrain(glew, ringFixUpPositions[i * 4 + 2].x, ringFixUpPositions[i * 4 + 2].y, programID, ringFixUpIndiceCount);
+			glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+			glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &model[0][0]);
+			Renderer::drawPartOfTerrain(glew, ringFixUpPositions[i * 4 + 1].x, ringFixUpPositions[i * 4 + 1].y, programID, ringFixUpIndiceCount);
+			Renderer::drawPartOfTerrain(glew, ringFixUpPositions[i * 4 + 3].x, ringFixUpPositions[i * 4 + 3].y, programID, ringFixUpIndiceCount);
+
+			// INTERIOR TRIM
+			glew->bindVertexArray(interiorTrimVAO);
+			//glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0, 0)[0]);
+			model = glm::rotate(glm::mat4(1), glm::radians(rotAmounts[i]), glm::vec3(0.0f, 1.0f, 0.0f));
+			glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &model[0][0]);
+			glew->uniform1f(glew->getUniformLocation(programID, "scale"), 2 << i);
+			Renderer::drawPartOfTerrain(glew, interiorTrimPositions[i].x, interiorTrimPositions[i].y, programID, interiorTrimIndiceCount);
+
+			// OUTER DEGENERATE
+			glew->bindVertexArray(outerDegenerateVAO);
+			model = glm::mat4(1);
+			//glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 0, 1)[0]);
+			glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &model[0][0]);
+			glew->uniform1f(glew->getUniformLocation(programID, "scale"), 1 << i);
+			Renderer::drawPartOfTerrain(glew, outerDegeneratePositions[i * 4 + 0].x, outerDegeneratePositions[i * 4 + 0].y, programID, outerDegenerateIndiceCount);
+			Renderer::drawPartOfTerrain(glew, outerDegeneratePositions[i * 4 + 1].x, outerDegeneratePositions[i * 4 + 1].y, programID, outerDegenerateIndiceCount);
+			model = glm::rotate(glm::mat4(1), glm::radians(-90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+			glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &model[0][0]);
+			Renderer::drawPartOfTerrain(glew, outerDegeneratePositions[i * 4 + 2].x, outerDegeneratePositions[i * 4 + 2].y, programID, outerDegenerateIndiceCount);
+			Renderer::drawPartOfTerrain(glew, outerDegeneratePositions[i * 4 + 3].x, outerDegeneratePositions[i * 4 + 3].y, programID, outerDegenerateIndiceCount);
+		}
+
+		glew->bindVertexArray(blockVAO);
+		glew->uniform1i(glew->getUniformLocation(programID, "level"), 0);
+		glew->uniform1f(glew->getUniformLocation(programID, "scale"), 1);
+		glew->uniform2f(glew->getUniformLocation(programID, "texturePos"), (float)terrain->initialTexturePositions[0].x, (float)terrain->initialTexturePositions[0].z);
+		//glew->uniform2f(glew->getUniformLocation(programID, "texturePos"), (float)terrain->currentTileIndices[0].x * TILE_SIZE, (float)terrain->currentTileIndices[0].z * TILE_SIZE);
+		glew->uniform1f(glew->getUniformLocation(programID, "texSize"), TILE_SIZE * (MEM_TILE_ONE_SIDE - 2));
+		//glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 0, 1)[0]);
+		glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &glm::mat4(1)[0][0]);
+		for (int i = 0; i < 4; i++)
+			Renderer::drawPartOfTerrain(glew, blockPositions[level * 12 + i].x, blockPositions[level * 12 + i].y, programID, blockIndiceCount);
+
+		glew->bindVertexArray(ringFixUpVAO);
+		//glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
+		Renderer::drawPartOfTerrain(glew, ringFixUpPositions[level * 4 + 0].x, ringFixUpPositions[level * 4 + 0].y, programID, ringFixUpIndiceCount);
+		Renderer::drawPartOfTerrain(glew, ringFixUpPositions[level * 4 + 2].x, ringFixUpPositions[level * 4 + 2].y, programID, ringFixUpIndiceCount);
+		glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &model[0][0]);
+		Renderer::drawPartOfTerrain(glew, ringFixUpPositions[level * 4 + 1].x, ringFixUpPositions[level * 4 + 1].y, programID, ringFixUpIndiceCount);
+		Renderer::drawPartOfTerrain(glew, ringFixUpPositions[level * 4 + 3].x, ringFixUpPositions[level * 4 + 3].y, programID, ringFixUpIndiceCount);
+
+		glew->bindVertexArray(smallSquareVAO);
+		model = glm::mat4(1);
+		glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &model[0][0]);
+		//glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 1, 1)[0]);
+		Renderer::drawPartOfTerrain(glew, smallSquarePosition.x, smallSquarePosition.y, programID, smallSquareIndiceCount);
+
+#endif 
+
+
+
+		////std::cout << "Draw call count for the terrain: " << count << std::endl;
+		//glew->bindVertexArray(0);
+	}
+
+	//void Renderer::drawBlock(glm::vec3& pos)
+
+	//void Renderer::drawInternalPart(int programID, int blockVAO, int ringFixupVAO, int smallSquareVAO, int blockIndiceCount, int ringFixupIndiceCount,
+	//	int smallSquareIndiceCount, int clipmapResolution, glm::vec3& camPos, glm::vec3& fakeDisplacement) {
+
+	//	float posX = (int)(camPos.x / 2) * 2;
+	//	float posZ = (int)(camPos.z / 2) * 2;
+
+	//	GlewContext* glew = Core::instance->glewContext;
+	//	glew->uniform1f(glew->getUniformLocation(programID, "scale"), 1);
+	//	glew->uniform2f(glew->getUniformLocation(programID, "clipMapPos"), posX - fakeDisplacement.x + 1.f, posZ - fakeDisplacement.z + 1.f);
+	//	glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 0, 1)[0]);
+	//	glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &glm::mat4(1)[0][0]);
+	//	glew->bindVertexArray(blockVAO);
+
+	//	/*
+	//	*  0 3
+	//	*  1 2
+	//	*/
+
+	//	glm::vec3 position(2 - fakeDisplacement.x + posX, 0, 2 - fakeDisplacement.z + posZ);
+
+	//	// 0
+	//	Renderer::drawPartOfTerrain(glew, position.x, position.z, programID, blockIndiceCount);
+
+	//	// 1
+	//	position.z -= clipmapResolution + 1;
+	//	Renderer::drawPartOfTerrain(glew, position.x, position.z, programID, blockIndiceCount);
+
+	//	// 2
+	//	position.x -= clipmapResolution + 1;
+	//	Renderer::drawPartOfTerrain(glew, position.x, position.z, programID, blockIndiceCount);
+
+	//	// 3
+	//	position.z += clipmapResolution + 1;
+	//	Renderer::drawPartOfTerrain(glew, position.x, position.z, programID, blockIndiceCount);
+
+	//	// RING FIX-UP
+
+	//		/*
+	//		*    0
+	//		*  1   3
+	//		*    2
+	//		*/
+
+	//	glew->bindVertexArray(ringFixupVAO);
+	//	glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(0, 1, 1)[0]);
+
+	//	position = glm::vec3(0 - fakeDisplacement.x + posX, 0, 2 - fakeDisplacement.z + posZ);
+
+	//	// 0
+	//	Renderer::drawPartOfTerrain(glew, position.x, position.z, programID, ringFixupIndiceCount);
+
+	//	// 2
+	//	position = glm::vec3(0 - fakeDisplacement.x + posX, 0, 1 - clipmapResolution - fakeDisplacement.z + posZ);
+	//	Renderer::drawPartOfTerrain(glew, position.x, position.z, programID, ringFixupIndiceCount);
+
+	//	glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+	//	glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &model[0][0]);
+
+	//	// 1
+	//	position = glm::vec3(2 - fakeDisplacement.x + posX, 0, 2 - fakeDisplacement.x + posZ);
+	//	Renderer::drawPartOfTerrain(glew, position.x, position.z, programID, ringFixupIndiceCount);
+
+	//	// 3
+	//	position = glm::vec3(1 - clipmapResolution - fakeDisplacement.x + posX, 0, 2 - fakeDisplacement.x + posZ);
+	//	Renderer::drawPartOfTerrain(glew, position.x, position.z, programID, ringFixupIndiceCount);
+
+	//	// LAST SQUARE AT CENTER
+	//	glew->bindVertexArray(smallSquareVAO);
+	//	glew->uniform3fv(glew->getUniformLocation(programID, "color_d"), 1, &glm::vec3(1, 1, 1)[0]);
+
+	//	model = glm::mat4(1);
+	//	glew->uniformMatrix4fv(glew->getUniformLocation(programID, "model"), 1, 0, &model[0][0]);
+
+	//	position = glm::vec3(0 - fakeDisplacement.x + posX, 0, 0 - fakeDisplacement.x + posZ);
+	//	Renderer::drawPartOfTerrain(glew, position.x, position.z, programID, smallSquareIndiceCount);
+	//}
+
+	void Renderer::drawPartOfTerrain(GlewContext* glew, float x, float z, unsigned int programID, unsigned int indiceCount) {
+		glew->uniform2f(glew->getUniformLocation(programID, "position"), x, z);
+		glew->drawElements(0x0004, indiceCount, 0x1405, 0);
 	}
 
 	Entity* Renderer::detectAndGetEntityId(float mouseX, float mouseY) {

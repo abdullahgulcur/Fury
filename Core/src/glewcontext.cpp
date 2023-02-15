@@ -2,6 +2,26 @@
 #include "GL/glew.h"
 #include "glewcontext.h"
 
+#define ASSERT(x) if(!(x)) __debugbreak;
+#define GLCall(x) GLClearError();\
+	x;\
+	ASSERT(GLLogCall(#x, __FILE__, __LINE__))
+
+static void GLClearError() {
+
+	while (glGetError() != GL_NO_ERROR);
+}
+
+static bool GLLogCall(const char* function, const char* file, int line) {
+
+	while (GLenum error = glGetError()) {
+
+		std::cout << "[OpenGL Error] (" << error << "): " << function << " " << file << ":" << line << std::endl;
+		return false;
+	}
+	return true;
+}
+
 namespace Fury {
 
 	GlewContext::GlewContext() {
@@ -12,7 +32,7 @@ namespace Fury {
 			fprintf(stderr, "Failed to initialize GLEW\n");
 
 		//glFrontFace(GL_CCW); // change this to ccw, its default value
-		//glCullFace(GL_BACK);
+		glCullFace(GL_BACK);
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		//glLineWidth(0.5f);
 		glEnable(GL_DEPTH_TEST);
@@ -424,7 +444,7 @@ namespace Fury {
 	}
 
 	void GlewContext::enableVertexAttribArray(unsigned int index) {
-		glEnableVertexAttribArray(index);
+		GLCall(glEnableVertexAttribArray(index));
 	}
 
 	void GlewContext::vertexAttribPointer(unsigned int index, unsigned int size, unsigned int stride, void* pointer) {
@@ -475,11 +495,11 @@ namespace Fury {
 		glBufferData(target, size, data, usage);
 	}
 	void GlewContext::vertexAttribPointer(unsigned int index, unsigned int size, unsigned int type, unsigned int normalized, unsigned int stride, void* pointer) {
-		glVertexAttribPointer(index, size, type, normalized, stride, pointer);
+		GLCall(glVertexAttribPointer(index, size, type, normalized, stride, pointer));
 	}
 
 	void GlewContext::drawElements(unsigned int mode, unsigned int count, unsigned int type, void* indices) {
-		glDrawElements(mode, count, type, indices);
+		GLCall(glDrawElements(mode, count, type, indices));
 	}
 
 	void GlewContext::lineWidth(float width) {
@@ -499,24 +519,24 @@ namespace Fury {
 	}
 
 	void GlewContext::genTextures(unsigned int size, unsigned int* textures) {
-		glGenTextures(size, textures);
+		GLCall(glGenTextures(size, textures));
 	}
 
 	void GlewContext::bindTexture(unsigned int target, unsigned int texture) {
-		glBindTexture(target, texture);
+		GLCall(glBindTexture(target, texture));
 	}
 
 	void GlewContext::texParameteri(unsigned int target, unsigned int pname, unsigned int param) {
-		glTexParameteri(target, pname, param);
+		GLCall(glTexParameteri(target, pname, param));
 	}
 
 	void GlewContext::texImage2D(unsigned int target, unsigned int level, unsigned int internalFormat, unsigned int width,
 		unsigned int height, unsigned int border, unsigned int format, unsigned int type, void* data) {
-		glTexImage2D(target, level, internalFormat, width, height, border, format, type, data);
+		GLCall(glTexImage2D(target, level, internalFormat, width, height, border, format, type, data));
 	}
 
 	void GlewContext::generateMipmap(unsigned int target) {
-		glGenerateMipmap(target);
+		GLCall(glGenerateMipmap(target));
 	}
 
 	void GlewContext::uniformMatrix4fv(unsigned int location, unsigned int count, unsigned int transpose, float* value) {
@@ -524,19 +544,27 @@ namespace Fury {
 	}
 
 	void GlewContext::uniform1i(unsigned int location, unsigned int v0) {
-		glUniform1i(location, v0);
+		GLCall(glUniform1i(location, v0));
 	}
 
 	void GlewContext::uniform3fv(unsigned int location, unsigned int count, float* value) {
 		glUniform3fv(location, count, value);
 	}
 
+	void GlewContext::uniform2fv(unsigned int location, unsigned int count, float* value) {
+		glUniform2fv(location, count, value);
+	}
+
+	void GlewContext::uniform2f(unsigned int location, float v0, float v1) {
+		GLCall(glUniform2f(location, v0, v1));
+	}
+
 	void GlewContext::uniform1f(unsigned int location, float v0) {
-		glUniform1f(location, v0);
+		GLCall(glUniform1f(location, v0));
 	}
 
 	unsigned int GlewContext::getUniformLocation(unsigned int program, const char* name) {
-		return glGetUniformLocation(program, name);
+		GLCall(return glGetUniformLocation(program, name));
 	}
 
 	void GlewContext::activeTexture(unsigned int texture) {
@@ -623,5 +651,24 @@ namespace Fury {
 		glPolygonMode(face, mode);
 	}
 
+	void GlewContext::texStorage3D(unsigned int target, unsigned int levels, unsigned int internalFormat, unsigned int width, unsigned int height, unsigned int depth) {
+		GLCall(glTexStorage3D(target, levels, internalFormat, width, height, depth));
+	}
+
+	void GlewContext::texSubImage3D(unsigned int target, unsigned int level, int xoffset, int yoffset, int zoffset, unsigned int width, unsigned int height, unsigned int depth, unsigned int format, unsigned int type, const void* pixels) {
+		GLCall(glTexSubImage3D(target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, pixels));
+	}
+
+	void GlewContext::vertexAttribDivisor(unsigned int index, unsigned int divisor) {
+		GLCall(glVertexAttribDivisor(index, divisor));
+	}
+
+	void GlewContext::drawElementsInstanced(unsigned int mode, unsigned int count, unsigned int type, const void* indices, unsigned int primcount) {
+		GLCall(glDrawElementsInstanced(mode, count, type, indices, primcount));
+	}
+
+	void GlewContext::deleteBuffers(unsigned int size, const unsigned int* buffers) {
+		GLCall(glDeleteBuffers(size, buffers));
+	}
 
 }

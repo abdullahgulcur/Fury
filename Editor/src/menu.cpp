@@ -2194,6 +2194,8 @@ namespace Editor {
 
 		if (treeNodeOpen) {
 
+			ImGui::Image((ImTextureID)comp->elevationMapTexture, ImVec2(128, 128), uv0, uv1, tint_col, border_col);
+
 			ImGui::TreePop();
 		}
 

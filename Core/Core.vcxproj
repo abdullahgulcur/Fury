@@ -557,6 +557,7 @@
     <ClInclude Include="src\include\GL\glxew.h" />
     <ClInclude Include="src\include\GL\wglew.h" />
     <ClInclude Include="src\include\lodepng\lodepng.h" />
+    <ClInclude Include="src\include\perlin\PerlinNoise.hpp" />
     <ClInclude Include="src\include\rapidXML\rapidxml.hpp" />
     <ClInclude Include="src\include\rapidXML\rapidxml_iterators.hpp" />
     <ClInclude Include="src\include\rapidXML\rapidxml_print.hpp" />

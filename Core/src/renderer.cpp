@@ -53,93 +53,97 @@ namespace Fury {
         drawCallCount = 0;
 
         Scene* scene = Core::instance->sceneManager->currentScene;
+
+        if (!scene)
+            return;
+
         GameCamera* camera = scene->primaryCamera;
 
-        if (scene && camera) {
+        if (!camera)
+            return;
 
-            GlewContext* glew = Core::instance->glewContext;
+        GlewContext* glew = Core::instance->glewContext;
 
-	        glm::mat4& VP = camera->projectionViewMatrix;
-            glm::vec3& camPos = camera->position;
+	    glm::mat4& VP = camera->projectionViewMatrix;
+        glm::vec3& camPos = camera->position;
 
-	        Core::instance->glewContext->bindFrameBuffer(camera->FBO);
-            glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
-	        Core::instance->glewContext->viewport(camera->width, camera->height);
-	        Core::instance->glewContext->clearScreen(glm::vec3(0.3f, 0.3f, 0.3f));
+	    Core::instance->glewContext->bindFrameBuffer(camera->FBO);
+        glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
+	    Core::instance->glewContext->viewport(camera->width, camera->height);
+	    Core::instance->glewContext->clearScreen(glm::vec3(0.3f, 0.3f, 0.3f));
 
-	        //for (int i = 0; i < Core::instance->sceneManager->currentScene->root->transform->children.size(); i++)
-		       // Renderer::drawMeshRendererRecursively(Core::instance->sceneManager->currentScene->root->transform->children[i]->entity,
-			      //  Core::instance->sceneManager->currentScene->primaryCamera->projectionViewMatrix, Core::instance->sceneManager->currentScene->primaryCamera->position);
+	    //for (int i = 0; i < Core::instance->sceneManager->currentScene->root->transform->children.size(); i++)
+		    // Renderer::drawMeshRendererRecursively(Core::instance->sceneManager->currentScene->root->transform->children[i]->entity,
+			    //  Core::instance->sceneManager->currentScene->primaryCamera->projectionViewMatrix, Core::instance->sceneManager->currentScene->primaryCamera->position);
 
            
 
-            std::stack<Entity*> entStack;
-            entStack.push(Core::instance->sceneManager->currentScene->root);
+        std::stack<Entity*> entStack;
+        entStack.push(Core::instance->sceneManager->currentScene->root);
 
-            while (!entStack.empty()) {
+        while (!entStack.empty()) {
                 
-                Entity* popped = entStack.top();
-                entStack.pop();
+            Entity* popped = entStack.top();
+            entStack.pop();
 
-                for (Transform*& child : popped->transform->children)
-                    entStack.push(child->entity);
+            for (Transform*& child : popped->transform->children)
+                entStack.push(child->entity);
 
-                MeshRenderer* renderer = popped->getComponent<MeshRenderer>();
-                if (!renderer)
-                    continue;
+            MeshRenderer* renderer = popped->getComponent<MeshRenderer>();
+            if (!renderer)
+                continue;
 
-                MeshFile* mesh = renderer->meshFile;
-                MaterialFile* mat = renderer->materialFile;
-                if(!mesh || !mat)
-                    continue;
+            MeshFile* mesh = renderer->meshFile;
+            MaterialFile* mat = renderer->materialFile;
+            if(!mesh || !mat)
+                continue;
 
-                glm::mat4 model = popped->transform->model;
-                glm::vec4 startInWorldSpace = model * mesh->aabbBox.start;
-                glm::vec4 endInWorldSpace = model * mesh->aabbBox.end;
+            glm::mat4 model = popped->transform->model;
+            glm::vec4 startInWorldSpace = model * mesh->aabbBox.start;
+            glm::vec4 endInWorldSpace = model * mesh->aabbBox.end;
 
-                if (!camera->intersectsAABB(startInWorldSpace, endInWorldSpace))
-                    continue;
+            if (!camera->intersectsAABB(startInWorldSpace, endInWorldSpace))
+                continue;
 
-                unsigned int programId = mat->programId;
-                glew->useProgram(programId);
-                glew->uniform3fv(glew->getUniformLocation(programId, "camPos"), 1, &camPos[0]);
-                glew->uniformMatrix4fv(glew->getUniformLocation(programId, "PV"), 1, 0, &VP[0][0]);
-                glew->uniformMatrix4fv(glew->getUniformLocation(programId, "model"), 1, 0, &model[0][0]);
+            unsigned int programId = mat->programId;
+            glew->useProgram(programId);
+            glew->uniform3fv(glew->getUniformLocation(programId, "camPos"), 1, &camPos[0]);
+            glew->uniformMatrix4fv(glew->getUniformLocation(programId, "PV"), 1, 0, &VP[0][0]);
+            glew->uniformMatrix4fv(glew->getUniformLocation(programId, "model"), 1, 0, &model[0][0]);
 
-                if (mat->shaderTypeId == 0) {
+            if (mat->shaderTypeId == 0) {
 
-                    for (int i = 0; i < mat->activeTextureIndices.size(); i++) {
+                for (int i = 0; i < mat->activeTextureIndices.size(); i++) {
 
-                        std::string texStr = "texture" + std::to_string(mat->activeTextureIndices[i]);
-                        glew->activeTexture(0x84C0 + i);
-                        glew->bindTexture(0x0DE1, mat->textureFiles[i]->textureId);
-                        glew->uniform1i(glew->getUniformLocation(programId, &texStr[0]), i);
-                    }
+                    std::string texStr = "texture" + std::to_string(mat->activeTextureIndices[i]);
+                    glew->activeTexture(0x84C0 + i);
+                    glew->bindTexture(0x0DE1, mat->textureFiles[i]->textureId);
+                    glew->uniform1i(glew->getUniformLocation(programId, &texStr[0]), i);
                 }
-
-                glew->bindVertexArray(mesh->VAO);
-                glew->drawElements(0x0004, mesh->indiceCount, 0x1405, (void*)0);
-                glew->bindVertexArray(0);
-
-                drawCallCount++;
             }
 
-	        Core::instance->glewContext->bindFrameBuffer(0);
+            glew->bindVertexArray(mesh->VAO);
+            glew->drawElements(0x0004, mesh->indiceCount, 0x1405, (void*)0);
+            glew->bindVertexArray(0);
+
+            drawCallCount++;
+        }
+
+	    Core::instance->glewContext->bindFrameBuffer(0);
 
 #ifndef EDITOR_MODE
-            Core::instance->glewContext->clearColor(1.0f, 1.0f, 1.0f, 1.0f);// set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
-            glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
-            Core::instance->glewContext->clear(0x00004000);
-            Core::instance->glewContext->useProgram(framebufferProgramID);
-            Core::instance->glewContext->bindVertexArray(quadVAO);
-            //Core::instance->glewContext->bindTexture(0x0DE1, Core::instance->scene->primaryCamera->textureBuffer);	// use the color attachment texture as the texture of the quad plane
+        Core::instance->glewContext->clearColor(1.0f, 1.0f, 1.0f, 1.0f);// set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
+        glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
+        Core::instance->glewContext->clear(0x00004000);
+        Core::instance->glewContext->useProgram(framebufferProgramID);
+        Core::instance->glewContext->bindVertexArray(quadVAO);
+        //Core::instance->glewContext->bindTexture(0x0DE1, Core::instance->scene->primaryCamera->textureBuffer);	// use the color attachment texture as the texture of the quad plane
 
-            Core::instance->glewContext->activeTexture(0x84C0);
-            Core::instance->glewContext->bindTexture(0x0DE1, Core::instance->sceneManager->currentScene->primaryCamera->textureBuffer);	// use the color attachment texture as the texture of the quad plane
-            Core::instance->glewContext->uniform1i(Core::instance->glewContext->getUniformLocation(framebufferProgramID, "screenTexture"), 0);
-            Core::instance->glewContext->drawArrays(0x0004, 0, 6);
+        Core::instance->glewContext->activeTexture(0x84C0);
+        Core::instance->glewContext->bindTexture(0x0DE1, Core::instance->sceneManager->currentScene->primaryCamera->textureBuffer);	// use the color attachment texture as the texture of the quad plane
+        Core::instance->glewContext->uniform1i(Core::instance->glewContext->getUniformLocation(framebufferProgramID, "screenTexture"), 0);
+        Core::instance->glewContext->drawArrays(0x0004, 0, 6);
 #endif // EDITOR_MODE
-        }
     }
 
     void Renderer::drawMeshRendererRecursively(Entity* entity, glm::mat4& PV, glm::vec3& camPos) {

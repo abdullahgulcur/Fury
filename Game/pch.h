@@ -21,5 +21,6 @@
 #include <queue>
 #include <sstream>
 #include <algorithm>
+#include <thread>
 
 #endif //PCH_H

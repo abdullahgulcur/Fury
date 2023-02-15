@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "texturefile.h"
 #include "core.h"
-#include <chrono>
 #include <iostream>
 using namespace std::chrono;
 
@@ -35,6 +34,9 @@ namespace Fury {
 
 	unsigned int TextureFile::loadPNGTexture(const char* imagepath) {
 
+		auto start = high_resolution_clock::now();
+
+
 		unsigned width, height;
 		std::vector<unsigned char> image;
 		lodepng::decode(image, width, height, imagepath);
@@ -42,7 +44,6 @@ namespace Fury {
 		unsigned int texture;
 
 		// start
-		auto start = high_resolution_clock::now(); 
 
 		Core::instance->glewContext->generateTexture(texture, width, height, &image[0]);
 
@@ -57,6 +58,11 @@ namespace Fury {
 	void TextureFile::decodeTextureFile(unsigned int& width, unsigned int& height, std::vector<unsigned char>& image, const char* imagepath) {
 
 		lodepng::decode(image, width, height, imagepath);
+	}
+
+	void TextureFile::encodeTextureFile(unsigned int& width, unsigned int& height, std::vector<unsigned char>& image, const char* imagepath) {
+
+		lodepng::encode(imagepath, image, width, height, LodePNGColorType::LCT_GREY, 16);
 	}
 
 }

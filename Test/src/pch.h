@@ -19,5 +19,6 @@
 #include <stack>
 #include <queue>
 #include <sstream>
+#include <thread>
 
 #endif //PCH_H

@@ -65,6 +65,8 @@ namespace Fury {
 		inline void uniformMatrix4fv(unsigned int location, unsigned int count, unsigned int transpose, float* value);
 		inline void uniform1i(unsigned int location, unsigned int v0);
 		inline void uniform3fv(unsigned int location, unsigned int count, float* value);
+		inline void uniform2fv(unsigned int location, unsigned int count, float* value);
+		inline void uniform2f(unsigned int location, float v0, float v1);
 		inline void uniform1f(unsigned int location, float v0);
 		inline unsigned int getUniformLocation(unsigned int program, const char* name);
 		inline void activeTexture(unsigned int texture);
@@ -88,5 +90,10 @@ namespace Fury {
 		inline unsigned int checkFramebufferStatus(unsigned int target);
 		inline void deleteProgram(unsigned int program);
 		inline void polygonMode(unsigned int face, unsigned int mode);
+		inline void texStorage3D(unsigned int target, unsigned int levels, unsigned int internalFormat, unsigned int width, unsigned int height, unsigned int depth);
+		inline void texSubImage3D(unsigned int target, unsigned int level, int xoffset, int yoffset, int zoffset, unsigned int width, unsigned int height, unsigned int depth, unsigned int format, unsigned int type, const void* pixels);
+		inline void vertexAttribDivisor(unsigned int index, unsigned int divisor);
+		inline void drawElementsInstanced(unsigned int mode, unsigned int count, unsigned int type, const void* indices, unsigned int primcount);
+		inline void deleteBuffers(unsigned int size, const unsigned int* buffers);
 	};
 }

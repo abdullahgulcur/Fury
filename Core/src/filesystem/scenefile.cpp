@@ -330,11 +330,11 @@ namespace Fury {
 
 	bool SceneFile::saveTerrainComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, Terrain* terrin) {
 
-		rapidxml::xml_node<>* terrainNode = doc.allocate_node(rapidxml::node_element, "Terrain");
-		terrainNode ->append_attribute(doc.allocate_attribute("ClipmapResolution", doc.allocate_string(std::to_string(terrin->clipmapResolution).c_str())));
-		terrainNode ->append_attribute(doc.allocate_attribute("ClipmapLevel", doc.allocate_string(std::to_string(terrin->clipmapLevel).c_str())));
-		terrainNode ->append_attribute(doc.allocate_attribute("TriangleSize", doc.allocate_string(std::to_string(terrin->triangleSize).c_str())));
-		entNode->append_node(terrainNode);
+		//rapidxml::xml_node<>* terrainNode = doc.allocate_node(rapidxml::node_element, "Terrain");
+		//terrainNode ->append_attribute(doc.allocate_attribute("ClipmapResolution", doc.allocate_string(std::to_string(terrin->clipmapResolution).c_str())));
+		//terrainNode ->append_attribute(doc.allocate_attribute("ClipmapLevel", doc.allocate_string(std::to_string(terrin->clipmapLevel).c_str())));
+		//terrainNode ->append_attribute(doc.allocate_attribute("TriangleSize", doc.allocate_string(std::to_string(terrin->triangleSize).c_str())));
+		//entNode->append_node(terrainNode);
 
 		return true;
 	}
@@ -347,8 +347,8 @@ namespace Fury {
 			return false;
 
 		Terrain* terrainComp = ent->addComponent<Terrain>();
-		terrainComp->clipmapResolution = atoi(cameraNode->first_attribute("ClipmapResolution")->value());
-		terrainComp->clipmapLevel = atoi(cameraNode->first_attribute("ClipmapLevel")->value());
+		terrainComp->clipmapResolution = 120;// atoi(cameraNode->first_attribute("ClipmapResolution")->value());
+		//terrainComp->clipmapLevel = 4;// atoi(cameraNode->first_attribute("ClipmapLevel")->value());
 		terrainComp->triangleSize = atof(cameraNode->first_attribute("TriangleSize")->value());
 		terrainComp->init();
 		return true;

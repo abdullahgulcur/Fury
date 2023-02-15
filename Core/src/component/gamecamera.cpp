@@ -147,6 +147,7 @@ namespace Fury {
 
         projectionMatrix = glm::perspective(GameCamera::getVerticalFOV(), aspectRatio, nearClip, farClip);
         projectionViewMatrix = projectionMatrix * viewMatrix;
+        GameCamera::frustum(projectionViewMatrix);
     }
 
     float GameCamera::getVerticalFOV() {
