@@ -1,5 +1,5 @@
 #pragma once
-
+#include "GL/glew.h"
 #include "glm/glm.hpp"
 #include "filesystem/meshfile.h"
 #include "component/meshrenderer.h"
@@ -16,7 +16,8 @@ namespace Fury {
 
 		GlewContext();
 		unsigned int loadShaders(const char* vertex_file_path, const char* fragment_file_path);
-		unsigned int loadPBRShaders(unsigned int programId, const char* vertex_file_path, const char* fragment_file_path,
+		unsigned int loadPBRShaders(const char* vertex_file_path, const char* fragment_file_path);
+		unsigned int loadPBRShaders(unsigned int pbrShaderProgramId, const char* vertex_file_path, const char* fragment_file_path,
 			std::vector<unsigned int>& activeTextures);
 		void initLineVAO(GLuint& cubeVAO, std::vector<glm::vec3>& points);
 		void drawLineVAO(GLuint lineRendererProgramID, GLuint cubeVAO, const glm::mat4& MVP);
@@ -28,7 +29,7 @@ namespace Fury {
 		void recreateFrameBuffer(unsigned int& FBO, unsigned int& textureBuffer, unsigned int& RBO, int sizeX, int sizeY);
 		void initVAO(unsigned int& VAO, std::vector<Vertex>& vertices, std::vector<unsigned int>& indices);
 		void drawMesh(GLuint programID, GLuint VAO, unsigned int indiceCount, const glm::mat4& VP, glm::vec3& camPos);
-		void drawMesh(MeshRenderer* component, const glm::mat4& VP, glm::mat4& model, glm::vec3& camPos);
+		//void drawMesh(MeshRenderer* component, const glm::mat4& VP, glm::mat4& model, glm::vec3& camPos);
 
 		inline void genVertexArrays(unsigned int size, unsigned int* arrays);
 		inline void genBuffers(unsigned int size, unsigned int* buffers);
@@ -39,12 +40,12 @@ namespace Fury {
 		inline void elementArrayBufferData(std::vector<unsigned int>& indices);
 		inline void enableVertexAttribArray(unsigned int index);
 		inline void vertexAttribPointer(unsigned int index, unsigned int size, unsigned int str, void* pointer);
-		inline void useProgram(unsigned int programId);
-		inline void setVec3(unsigned int programId, std::string uniformName, glm::vec3 value);
-		inline void setMat4(unsigned int programId, std::string uniformName, glm::mat4 value);
+		inline void useProgram(unsigned int pbrShaderProgramId);
+		inline void setVec3(unsigned int pbrShaderProgramId, std::string uniformName, glm::vec3 value);
+		inline void setMat4(unsigned int pbrShaderProgramId, std::string uniformName, glm::mat4 value);
 		inline void drawElements_tri(int indiceCount);
 		inline void drawElements_triStrip(int indiceCount);
-		inline void setInt(unsigned int programId, std::string uniformName, unsigned int index);
+		inline void setInt(unsigned int pbrShaderProgramId, std::string uniformName, unsigned int index);
 		inline void activeTex(unsigned int index);
 		inline void bindTex(unsigned int texId);
 		inline void drawArrays(unsigned int mode, unsigned int first, unsigned int indiceCount);
@@ -68,6 +69,7 @@ namespace Fury {
 		inline void uniform2fv(unsigned int location, unsigned int count, float* value);
 		inline void uniform2f(unsigned int location, float v0, float v1);
 		inline void uniform1f(unsigned int location, float v0);
+		inline void uniform3f(unsigned int location, float v0, float v1, float v2);
 		inline unsigned int getUniformLocation(unsigned int program, const char* name);
 		inline void activeTexture(unsigned int texture);
 		inline void deleteVertexArrays(unsigned int n, unsigned int* arrays);
@@ -95,5 +97,7 @@ namespace Fury {
 		inline void vertexAttribDivisor(unsigned int index, unsigned int divisor);
 		inline void drawElementsInstanced(unsigned int mode, unsigned int count, unsigned int type, const void* indices, unsigned int primcount);
 		inline void deleteBuffers(unsigned int size, const unsigned int* buffers);
+		inline void enable(unsigned int cap);
+		inline void depthFunc(unsigned int func);
 	};
 }

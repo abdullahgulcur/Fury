@@ -178,6 +178,7 @@ namespace Fury {
     void MeshFile::createFileIcon(File* file, float radius) {
 
         GlewContext* glewContext = Core::instance->glewContext;
+        FileSystem* fileSystem = Core::instance->fileSystem;
         glewContext->createFrameBuffer(fileIconFBO, fileIconRBO, fileTextureId, 64, 64);
 
         float z = (radius * 1.2f);// *glm::sin(3.14f / 4);
@@ -192,11 +193,39 @@ namespace Fury {
         glewContext->viewport(64, 64);
         glewContext->clearScreen(glm::vec3(0.12f, 0.12f, 0.12f));
 
-        unsigned int programId = Core::instance->fileSystem->pbrMaterialNoTexture->programId;
-        glewContext->useProgram(programId);
-        glewContext->setVec3(programId, "camPos", camPos);
-        glewContext->setMat4(programId, "PV", projection * view);
-        glewContext->setMat4(programId, "model", glm::mat4(1));
+        unsigned int pbrShaderProgramId = fileSystem->pbrMaterial->pbrShaderProgramId_old;
+        glewContext->useProgram(pbrShaderProgramId);
+        glewContext->setVec3(pbrShaderProgramId, "camPos", camPos);
+        glewContext->setMat4(pbrShaderProgramId, "PV", projection * view);
+        glewContext->setMat4(pbrShaderProgramId, "model", glm::mat4(1));
+
+        unsigned int whiteTextureId = fileSystem->whiteTexture->textureId;
+        unsigned int blackTextureId = fileSystem->blackTexture->textureId;
+
+        // albedo
+        glewContext->activeTex(0);
+        glewContext->bindTex(whiteTextureId);
+        glewContext->setInt(pbrShaderProgramId, "texture" + std::to_string(0), 0);
+
+        // normal
+        glewContext->activeTex(1);
+        glewContext->bindTex(fileSystem->flatNormalMapTexture->textureId);
+        glewContext->setInt(pbrShaderProgramId, "texture" + std::to_string(1), 1);
+
+        // metallic
+        glewContext->activeTex(2);
+        glewContext->bindTex(blackTextureId);
+        glewContext->setInt(pbrShaderProgramId, "texture" + std::to_string(2), 2);
+
+        // roughness
+        glewContext->activeTex(3);
+        glewContext->bindTex(blackTextureId);
+        glewContext->setInt(pbrShaderProgramId, "texture" + std::to_string(3), 3);
+
+        // ao
+        glewContext->activeTex(4);
+        glewContext->bindTex(whiteTextureId);
+        glewContext->setInt(pbrShaderProgramId, "texture" + std::to_string(4), 4);
 
         glewContext->bindVertexArray(VAO);
         glewContext->drawElements(0x0004, indiceCount, 0x1405, (void*)0);

@@ -62,13 +62,14 @@ namespace Fury {
         if (!camera)
             return;
 
+        PBRMaterial* pbrMaterial = Core::instance->fileSystem->pbrMaterial;
         GlewContext* glew = Core::instance->glewContext;
 
 	    glm::mat4& VP = camera->projectionViewMatrix;
         glm::vec3& camPos = camera->position;
 
 	    Core::instance->glewContext->bindFrameBuffer(camera->FBO);
-        glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
+        Core::instance->glewContext->enable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
 	    Core::instance->glewContext->viewport(camera->width, camera->height);
 	    Core::instance->glewContext->clearScreen(glm::vec3(0.3f, 0.3f, 0.3f));
 
@@ -105,26 +106,34 @@ namespace Fury {
             if (!camera->intersectsAABB(startInWorldSpace, endInWorldSpace))
                 continue;
 
-            unsigned int programId = mat->programId;
-            glew->useProgram(programId);
-            glew->uniform3fv(glew->getUniformLocation(programId, "camPos"), 1, &camPos[0]);
-            glew->uniformMatrix4fv(glew->getUniformLocation(programId, "PV"), 1, 0, &VP[0][0]);
-            glew->uniformMatrix4fv(glew->getUniformLocation(programId, "model"), 1, 0, &model[0][0]);
+            switch (mat->shaderType) {
 
-            if (mat->shaderTypeId == 0) {
+            case ShaderType::PBR: {
+                
+                unsigned int pbrShaderProgramId = pbrMaterial->pbrShaderProgramId_old;
+                glew->useProgram(pbrShaderProgramId);
+                glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, "camPos"), 1, &camPos[0]);
+                glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "PV"), 1, 0, &VP[0][0]);
+                glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "model"), 1, 0, &model[0][0]);
 
-                for (int i = 0; i < mat->activeTextureIndices.size(); i++) {
+                for (int i = 0; i < mat->textureFiles.size(); i++) {
 
-                    std::string texStr = "texture" + std::to_string(mat->activeTextureIndices[i]);
+                    std::string texStr = "texture" + std::to_string(i);
                     glew->activeTexture(0x84C0 + i);
                     glew->bindTexture(0x0DE1, mat->textureFiles[i]->textureId);
-                    glew->uniform1i(glew->getUniformLocation(programId, &texStr[0]), i);
+                    glew->uniform1i(glew->getUniformLocation(pbrShaderProgramId, &texStr[0]), i);
                 }
-            }
 
-            glew->bindVertexArray(mesh->VAO);
-            glew->drawElements(0x0004, mesh->indiceCount, 0x1405, (void*)0);
-            glew->bindVertexArray(0);
+                glew->bindVertexArray(mesh->VAO);
+                glew->drawElements(0x0004, mesh->indiceCount, 0x1405, (void*)0);
+                glew->bindVertexArray(0);
+
+                break;
+            }
+            case ShaderType::PBR_ALPHA: {
+                break;
+            }
+            }
 
             drawCallCount++;
         }
@@ -146,50 +155,50 @@ namespace Fury {
 #endif // EDITOR_MODE
     }
 
-    void Renderer::drawMeshRendererRecursively(Entity* entity, glm::mat4& PV, glm::vec3& camPos) {
+    //void Renderer::drawMeshRendererRecursively(Entity* entity, glm::mat4& PV, glm::vec3& camPos) {
 
-        MeshRenderer* renderer = entity->getComponent<MeshRenderer>();
-        //Terrain* terrain = entity->getComponent<Terrain>();
-        GameCamera* gamecamera = entity->getComponent<GameCamera>();
-        glm::mat4 model = entity->transform->model;
-        glm::mat4& VP = PV;
-        GlewContext* glew = Core::instance->glewContext;
+    //    MeshRenderer* renderer = entity->getComponent<MeshRenderer>();
+    //    //Terrain* terrain = entity->getComponent<Terrain>();
+    //    GameCamera* gamecamera = entity->getComponent<GameCamera>();
+    //    glm::mat4 model = entity->transform->model;
+    //    glm::mat4& VP = PV;
+    //    GlewContext* glew = Core::instance->glewContext;
 
-        if (renderer != NULL) {
-            if (renderer->meshFile && renderer->materialFile) {
+    //    if (renderer != NULL) {
+    //        if (renderer->meshFile && renderer->materialFile) {
 
-                unsigned int programId = renderer->materialFile->programId;
-                glew->useProgram(programId);
-                glew->uniform3fv(glew->getUniformLocation(programId, "camPos"), 1, &camPos[0]);
-                glew->uniformMatrix4fv(glew->getUniformLocation(programId, "PV"), 1, 0, &VP[0][0]);
-                glew->uniformMatrix4fv(glew->getUniformLocation(programId, "model"), 1, 0, &model[0][0]);
+    //            unsigned int programId = renderer->materialFile->programId;
+    //            glew->useProgram(programId);
+    //            glew->uniform3fv(glew->getUniformLocation(programId, "camPos"), 1, &camPos[0]);
+    //            glew->uniformMatrix4fv(glew->getUniformLocation(programId, "PV"), 1, 0, &VP[0][0]);
+    //            glew->uniformMatrix4fv(glew->getUniformLocation(programId, "model"), 1, 0, &model[0][0]);
 
-                if (renderer->materialFile->shaderTypeId == 0) {
+    //            if (renderer->materialFile->shaderType == ShaderType::PBR) {
 
-                    for (int i = 0; i < renderer->materialFile->activeTextureIndices.size(); i++) {
+    //                for (int i = 0; i < renderer->materialFile->activeTextureIndices.size(); i++) {
 
-                        std::string texStr = "texture" + std::to_string(renderer->materialFile->activeTextureIndices[i]);
-                        glew->activeTexture(0x84C0 + i);
-                        glew->bindTexture(0x0DE1, renderer->materialFile->textureFiles[i]->textureId);
-                        glew->uniform1i(glew->getUniformLocation(programId, &texStr[0]), i);
-                    }
-                }
+    //                    std::string texStr = "texture" + std::to_string(renderer->materialFile->activeTextureIndices[i]);
+    //                    glew->activeTexture(0x84C0 + i);
+    //                    glew->bindTexture(0x0DE1, renderer->materialFile->textureFiles[i]->textureId);
+    //                    glew->uniform1i(glew->getUniformLocation(programId, &texStr[0]), i);
+    //                }
+    //            }
 
-                glew->bindVertexArray(renderer->meshFile->VAO);
-                glew->drawElements(0x0004, renderer->meshFile->indiceCount, 0x1405, (void*)0);
-                glew->bindVertexArray(0);
-            }
-        }
+    //            glew->bindVertexArray(renderer->meshFile->VAO);
+    //            glew->drawElements(0x0004, renderer->meshFile->indiceCount, 0x1405, (void*)0);
+    //            glew->bindVertexArray(0);
+    //        }
+    //    }
 
-        //if (terrain != NULL)
-        //    Renderer::drawTerrain(Editor::instance->sceneCamera, terrain);
+    //    //if (terrain != NULL)
+    //    //    Renderer::drawTerrain(Editor::instance->sceneCamera, terrain);
 
-        //if (gamecamera != NULL && Editor::instance->menu->selectedEntity == entity) // bunu ayir
-        //    gamecamera->drawEditorGizmos(PV, entity->transform->model);
+    //    //if (gamecamera != NULL && Editor::instance->menu->selectedEntity == entity) // bunu ayir
+    //    //    gamecamera->drawEditorGizmos(PV, entity->transform->model);
 
-        for (auto& transform : entity->transform->children)
-            Renderer::drawMeshRendererRecursively(transform->entity, PV, camPos);
-    }
+    //    for (auto& transform : entity->transform->children)
+    //        Renderer::drawMeshRendererRecursively(transform->entity, PV, camPos);
+    //}
 
     void Renderer::initDefaultSphere() {
 

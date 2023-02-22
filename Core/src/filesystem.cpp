@@ -155,7 +155,14 @@ namespace Fury {
 		//pbrWithoutTexture = new ShaderFile("C:/Projects/GameEngine2/Fury/Core/src/shader/PBRNoTexture.vert", 
 			//"C:/Projects/GameEngine2/Fury/Core/src/shader/PBRNoTexture.frag", core);
 			// 
-		pbrMaterialNoTexture = new MaterialFile();
+
+		blackTexture = new TextureFile(TextureType::BLACK);
+		whiteTexture = new TextureFile(TextureType::WHITE);
+		flatNormalMapTexture = new TextureFile(TextureType::NORMAL_MAP_FLAT);
+		pbrMaterial = new PBRMaterial();
+
+		//pbrMaterialNoTexture = new MaterialFile();
+		//pbrMat = new MaterialFile();
 	}
 
 	// bunun gubu uzun baska bir fonksiyon daha var. Import asset
@@ -976,15 +983,17 @@ namespace Fury {
 		rapidxml::xml_node<>* typeNode = doc.allocate_node(rapidxml::node_element, "Type");
 		typeNode->append_attribute(doc.allocate_attribute("value", "PBR"));
 		rapidxml::xml_node<>* texturesNode = doc.allocate_node(rapidxml::node_element, "Textures");
-		materialNode->append_node(texturesNode);
 		materialNode->append_node(typeNode);
+		materialNode->append_node(texturesNode);
+
+		for (int i = 0; i < 5; i++) {
+			rapidxml::xml_node<>* texture = doc.allocate_node(rapidxml::node_element, "Texture");
+			texture->append_attribute(doc.allocate_attribute("fileId", doc.allocate_string("-1")));
+			texturesNode->append_node(texture);
+		}
 
 		//rapidxml::xml_node<>* texturesNode = doc.allocate_node(rapidxml::node_element, "Textures");
-		////for (int i = 0; i < 5; i++) {
-		////	rapidxml::xml_node<>* texture = doc.allocate_node(rapidxml::node_element, "Texture");
-		////	texture->append_attribute(doc.allocate_attribute("fileId", doc.allocate_string("-1")));
-		////	texturesNode->append_node(texture);
-		////}
+
 
 		//for(int i = 0; )
 

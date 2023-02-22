@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "GL/glew.h"
 #include "glewcontext.h"
 
 #define ASSERT(x) if(!(x)) __debugbreak;
@@ -32,12 +31,14 @@ namespace Fury {
 			fprintf(stderr, "Failed to initialize GLEW\n");
 
 		//glFrontFace(GL_CCW); // change this to ccw, its default value
-		glCullFace(GL_BACK);
+		//glCullFace(GL_BACK);
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		//glLineWidth(0.5f);
 		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
-		glEnable(GL_CULL_FACE);
+		glDepthFunc(GL_LEQUAL);
+		//glEnable(GL_CULL_FACE);
+		// enable seamless cubemap sampling for lower mip levels in the pre-filter map.
+		//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	}
 
 	unsigned int GlewContext::loadShaders(const char* vertex_file_path, const char* fragment_file_path) {
@@ -129,11 +130,11 @@ namespace Fury {
 		return ProgramID;
 	}
 
-	unsigned int GlewContext::loadPBRShaders(unsigned int programId, const char* vertex_file_path, const char* fragment_file_path,
+	unsigned int GlewContext::loadPBRShaders(unsigned int pbrShaderProgramId, const char* vertex_file_path, const char* fragment_file_path,
 		std::vector<unsigned int>& activeTextures) {
 
-		if(programId)
-			glDeleteProgram(programId);
+		if(pbrShaderProgramId)
+			glDeleteProgram(pbrShaderProgramId);
 
 		//Create the shaders
 		unsigned int VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
@@ -237,6 +238,94 @@ namespace Fury {
 		return ProgramID;
 	}
 
+	unsigned int GlewContext::loadPBRShaders(const char* vertex_file_path, const char* fragment_file_path) {
+		//Create the shaders
+		unsigned int VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
+		unsigned int FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+
+		// Read the Vertex Shader code from the file
+		std::string VertexShaderCode;
+		std::ifstream VertexShaderStream(vertex_file_path, std::ios::in);
+		if (VertexShaderStream.is_open()) {
+			std::stringstream sstr;
+			sstr << VertexShaderStream.rdbuf();
+			VertexShaderCode = sstr.str();
+			VertexShaderStream.close();
+		}
+		else {
+			printf("Impossible to open %s. Are you in the right directory ? Don't forget to read the FAQ !\n", vertex_file_path);
+			getchar();
+			return 0;
+		}
+
+		// Read the Fragment Shader code from the file
+		std::string FragmentShaderCode;
+		std::ifstream FragmentShaderStream(fragment_file_path, std::ios::in);
+		if (FragmentShaderStream.is_open()) {
+			std::stringstream sstr;
+			sstr << FragmentShaderStream.rdbuf();
+			FragmentShaderCode = sstr.str();
+			FragmentShaderStream.close();
+		}
+
+		int Result = GL_FALSE;
+		int InfoLogLength;
+
+		// Compile Vertex Shader
+		printf("Compiling shader : %s\n", vertex_file_path);
+		char const* VertexSourcePointer = VertexShaderCode.c_str();
+		glShaderSource(VertexShaderID, 1, &VertexSourcePointer, NULL);
+		glCompileShader(VertexShaderID);
+
+		// Check Vertex Shader
+		glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
+		glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+		if (InfoLogLength > 0) {
+			std::vector<char> VertexShaderErrorMessage(InfoLogLength + 1);
+			glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, &VertexShaderErrorMessage[0]);
+			printf("%s\n", &VertexShaderErrorMessage[0]);
+		}
+
+		// Compile Fragment Shader
+		printf("Compiling shader : %s\n", fragment_file_path);
+		char const* FragmentSourcePointer = FragmentShaderCode.c_str();
+		glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer, NULL);
+		glCompileShader(FragmentShaderID);
+
+		// Check Fragment Shader
+		glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &Result);
+		glGetShaderiv(FragmentShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+		if (InfoLogLength > 0) {
+			std::vector<char> FragmentShaderErrorMessage(InfoLogLength + 1);
+			glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
+			printf("%s\n", &FragmentShaderErrorMessage[0]);
+		}
+
+		// Link the program
+		printf("Linking program\n");
+		unsigned int ProgramID = glCreateProgram();
+		glAttachShader(ProgramID, VertexShaderID);
+		glAttachShader(ProgramID, FragmentShaderID);
+		glLinkProgram(ProgramID);
+
+		// Check the program
+		glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
+		glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+		if (InfoLogLength > 0) {
+			std::vector<char> ProgramErrorMessage(InfoLogLength + 1);
+			glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
+			printf("%s\n", &ProgramErrorMessage[0]);
+		}
+
+		glDetachShader(ProgramID, VertexShaderID);
+		glDetachShader(ProgramID, FragmentShaderID);
+
+		glDeleteShader(VertexShaderID);
+		glDeleteShader(FragmentShaderID);
+
+		return ProgramID;
+	}
+
 	void GlewContext::initLineVAO(GLuint& cubeVAO, std::vector<glm::vec3>& points) {
 
 		glGenVertexArrays(1, &cubeVAO);
@@ -277,28 +366,28 @@ namespace Fury {
 		glBindVertexArray(0);
 	}
 
-	void GlewContext::drawMesh(MeshRenderer* component, const glm::mat4& VP, glm::mat4& model, glm::vec3& camPos) {
+	//void GlewContext::drawMesh(MeshRenderer* component, const glm::mat4& VP, glm::mat4& model, glm::vec3& camPos) {
 
-		// (3) iterate through active texture indices and bind with texture index at shader...
-		unsigned int programId = component->materialFile->programId;
-		glUseProgram(programId);
-		//glm::mat4 model(1);
-		glUniform3fv(glGetUniformLocation(programId, "camPos"), 1, &camPos[0]);
-		glUniformMatrix4fv(glGetUniformLocation(programId, "PV"), 1, GL_FALSE, &VP[0][0]);
-		glUniformMatrix4fv(glGetUniformLocation(programId, "model"), 1, GL_FALSE, &model[0][0]);
+	//	// (3) iterate through active texture indices and bind with texture index at shader...
+	//	unsigned int programId = component->materialFile->programId;
+	//	glUseProgram(programId);
+	//	//glm::mat4 model(1);
+	//	glUniform3fv(glGetUniformLocation(programId, "camPos"), 1, &camPos[0]);
+	//	glUniformMatrix4fv(glGetUniformLocation(programId, "PV"), 1, GL_FALSE, &VP[0][0]);
+	//	glUniformMatrix4fv(glGetUniformLocation(programId, "model"), 1, GL_FALSE, &model[0][0]);
 
-		for (int i = 0; i < component->materialFile->activeTextureIndices.size(); i++) {
+	//	for (int i = 0; i < component->materialFile->activeTextureIndices.size(); i++) {
 
-			std::string texStr = "texture" + std::to_string(component->materialFile->activeTextureIndices[i]);
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, component->materialFile->textureFiles[i]->textureId);
-			glUniform1i(glGetUniformLocation(programId, &texStr[0]), i);
-		}
+	//		std::string texStr = "texture" + std::to_string(component->materialFile->activeTextureIndices[i]);
+	//		glActiveTexture(GL_TEXTURE0 + i);
+	//		glBindTexture(GL_TEXTURE_2D, component->materialFile->textureFiles[i]->textureId);
+	//		glUniform1i(glGetUniformLocation(programId, &texStr[0]), i);
+	//	}
 
-		glBindVertexArray(component->meshFile->VAO);
-		glDrawElements(GL_TRIANGLES, component->meshFile->indiceCount, GL_UNSIGNED_INT, (void*)0);
-		glBindVertexArray(0);
-	}
+	//	glBindVertexArray(component->meshFile->VAO);
+	//	glDrawElements(GL_TRIANGLES, component->meshFile->indiceCount, GL_UNSIGNED_INT, (void*)0);
+	//	glBindVertexArray(0);
+	//}
 
 	void GlewContext::clearScreen(glm::vec3 color) {
 
@@ -369,7 +458,7 @@ namespace Fury {
 	}
 
 	void GlewContext::bindFrameBuffer(GLuint buffer) {
-		glBindFramebuffer(GL_FRAMEBUFFER, buffer);
+		GLCall(glBindFramebuffer(GL_FRAMEBUFFER, buffer));
 	}
 
 	void GlewContext::generateTexture(unsigned int& textureId, unsigned width, unsigned height, unsigned char* image) {
@@ -451,16 +540,16 @@ namespace Fury {
 		glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE, stride, pointer);
 	}
 
-	void GlewContext::useProgram(unsigned int programId) {
-		glUseProgram(programId);
+	void GlewContext::useProgram(unsigned int pbrShaderProgramId) {
+		GLCall(glUseProgram(pbrShaderProgramId));
 	}
 
-	void GlewContext::setVec3(unsigned int programId, std::string uniformName, glm::vec3 value) {
-		glUniform3fv(glGetUniformLocation(programId, uniformName.c_str()), 1, &value[0]);
+	void GlewContext::setVec3(unsigned int pbrShaderProgramId, std::string uniformName, glm::vec3 value) {
+		glUniform3fv(glGetUniformLocation(pbrShaderProgramId, uniformName.c_str()), 1, &value[0]);
 	}
 
-	void GlewContext::setMat4(unsigned int programId, std::string uniformName, glm::mat4 value) {
-		glUniformMatrix4fv(glGetUniformLocation(programId, uniformName.c_str()), 1, GL_FALSE, &value[0][0]);
+	void GlewContext::setMat4(unsigned int pbrShaderProgramId, std::string uniformName, glm::mat4 value) {
+		glUniformMatrix4fv(glGetUniformLocation(pbrShaderProgramId, uniformName.c_str()), 1, GL_FALSE, &value[0][0]);
 	}
 
 	void GlewContext::drawElements_tri(int indiceCount) {
@@ -471,8 +560,8 @@ namespace Fury {
 		glDrawElements(GL_TRIANGLE_STRIP, indiceCount, GL_UNSIGNED_INT, (void*)0);
 	}
 
-	void GlewContext::setInt(unsigned int programId, std::string uniformName, unsigned int index) {
-		glUniform1i(glGetUniformLocation(programId, &uniformName[0]), index);
+	void GlewContext::setInt(unsigned int pbrShaderProgramId, std::string uniformName, unsigned int index) {
+		glUniform1i(glGetUniformLocation(pbrShaderProgramId, &uniformName[0]), index);
 	}
 
 	void GlewContext::activeTex(unsigned int index) {
@@ -540,7 +629,7 @@ namespace Fury {
 	}
 
 	void GlewContext::uniformMatrix4fv(unsigned int location, unsigned int count, unsigned int transpose, float* value) {
-		glUniformMatrix4fv(location, count, transpose, value);
+		GLCall(glUniformMatrix4fv(location, count, transpose, value));
 	}
 
 	void GlewContext::uniform1i(unsigned int location, unsigned int v0) {
@@ -548,11 +637,11 @@ namespace Fury {
 	}
 
 	void GlewContext::uniform3fv(unsigned int location, unsigned int count, float* value) {
-		glUniform3fv(location, count, value);
+		GLCall(glUniform3fv(location, count, value));
 	}
 
 	void GlewContext::uniform2fv(unsigned int location, unsigned int count, float* value) {
-		glUniform2fv(location, count, value);
+		GLCall(glUniform2fv(location, count, value));
 	}
 
 	void GlewContext::uniform2f(unsigned int location, float v0, float v1) {
@@ -563,12 +652,16 @@ namespace Fury {
 		GLCall(glUniform1f(location, v0));
 	}
 
+	void GlewContext::uniform3f(unsigned int location, float v0, float v1, float v2) {
+		GLCall(glUniform3f(location, v0, v1, v2));
+	}
+
 	unsigned int GlewContext::getUniformLocation(unsigned int program, const char* name) {
 		GLCall(return glGetUniformLocation(program, name));
 	}
 
 	void GlewContext::activeTexture(unsigned int texture) {
-		glActiveTexture(texture);
+		GLCall(glActiveTexture(texture));
 	}
 
 	void GlewContext::deleteVertexArrays(unsigned int n, unsigned int* arrays) {
@@ -671,4 +764,11 @@ namespace Fury {
 		GLCall(glDeleteBuffers(size, buffers));
 	}
 
+	void GlewContext::enable(unsigned int cap) {
+		glEnable(cap);
+	}
+
+	void GlewContext::depthFunc(unsigned int func) {
+		glDepthFunc(func);
+	}
 }

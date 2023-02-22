@@ -29,7 +29,7 @@ namespace Fury {
 		void init();
 		void initDefaultSphere();
 		void update();
-		void drawMeshRendererRecursively(Entity* entity, glm::mat4& PV, glm::vec3& camPos);
+		//void drawMeshRendererRecursively(Entity* entity, glm::mat4& PV, glm::vec3& camPos);
 
 		//void update();
 	};

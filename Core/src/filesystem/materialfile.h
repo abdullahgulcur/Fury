@@ -12,24 +12,32 @@ namespace Fury {
 	class Core;
 	class MeshRenderer;
 
+	enum class __declspec(dllexport) ShaderType {
+		PBR, PBR_ALPHA
+	};
+
 	class __declspec(dllexport) MaterialFile {
 
 	private:
 
 	public:
 
-		unsigned int programId;
+		//unsigned int programId;
+		ShaderType shaderType;
 		std::vector<TextureFile*> textureFiles; // bir material e ayni texture lar konulmucak !
+		std::vector<float> floats;
 		//UINT8 activeTexture;
-		std::vector<unsigned int> activeTextureIndices;
+		//std::vector<unsigned int> activeTextureIndices;
+
+		// vector floats, ints... sonucta burasi sadece dosya icin. editorde faydali olacak
 
 		/* For editor */
-		unsigned int shaderTypeId;
 		unsigned int FBO;
 		unsigned int RBO;
 		unsigned int fileTextureId;
 
-		MaterialFile();
+		//MaterialFile();
+		//MaterialFile(ShaderType type);
 		~MaterialFile();
 		MaterialFile(File* file);
 		void updatePBRMaterial(File* file);
@@ -47,6 +55,6 @@ namespace Fury {
 
 		/* For editor */
 		void createFileIcon(File* file);
-		void createFBO();
+		//void createFBO();
 	};
 }

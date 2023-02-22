@@ -1,6 +1,6 @@
 #pragma once
 
-//#include "filesystem/shaderfile.h"
+#include "material/pbrmaterial.h"
 
 namespace Fury {
 
@@ -82,8 +82,13 @@ namespace Fury {
 
 		//ShaderFile* defaultShaderFileWithTexture; // pbr, metallic setup
 		//ShaderFile* pbrWithoutTexture; // pbr, metallic setup
+		TextureFile* blackTexture;
+		TextureFile* whiteTexture;
+		TextureFile* flatNormalMapTexture;
 		ShaderFile* pbrShader;
-		MaterialFile* pbrMaterialNoTexture;
+		//MaterialFile* pbrMaterialNoTexture;
+		PBRMaterial* pbrMaterial;
+		//MaterialFile* pbrMat;
 		SceneFile* currentSceneFile;
 
 		File* moveFileBuffer = NULL;

@@ -2331,13 +2331,13 @@ namespace Editor {
 		//	if (mat != Core::instance->fileSystem->pbrMaterialNoTexture) {
 				ImGui::TextColored(DEFAULT_TEXT_COLOR, "Vert Shader");
 				ImGui::SameLine(115); ImGui::SetNextItemWidth(width - 115);
-				int shaderType = mat->shaderTypeId;
+				int shaderType = (int)mat->shaderType;
 				const char** shaderNames = new const char* [1];
 				shaderNames[0] = "PBR\0";
 
 				if (ImGui::Combo("##0", &shaderType, shaderNames, 1)) {
 
-					mat->shaderTypeId = shaderType;
+					mat->shaderType = (ShaderType)shaderType;
 
 					/*if (shaderType == 0) {
 						File* file = Core::instance->fileSystem->matFileToFile[mat];
@@ -2392,20 +2392,19 @@ namespace Editor {
 			// stringler mapten cekilir vsvs...
 				if (shaderType == 0) {
 
-					int counter = 0;
 					for (int i = 0; i < 5; i++) {
 
 						ImGui::PushID(i);
 
-						if (std::count(mat->activeTextureIndices.begin(), mat->activeTextureIndices.end(), i)) {
+					//	if (std::count(mat->activeTextureIndices.begin(), mat->activeTextureIndices.end(), i)) {
 
-							if (ImGui::ImageButton((ImTextureID)mat->textureFiles[counter]->textureId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+							if (ImGui::ImageButton((ImTextureID)mat->textureFiles[i]->textureId, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
 								//ImGui::OpenPopup("texture_menu_popup");
 								//popupFlag = true;
 							}
 
 							if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
-								mat->releaseTexFile(counter);
+								mat->releaseTexFile(i);
 
 								ImGui::PopID();
 								ImGui::TreePop();
@@ -2413,15 +2412,14 @@ namespace Editor {
 								return;
 							}
 
-							counter++;
-						}
-						else {
+				//		}
+				//		else {
 
-							if (ImGui::ImageButton((ImTextureID)0, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
-								//ImGui::OpenPopup("texture_menu_popup");
-								//popupFlag = true;
-							}
-						}
+							//if (ImGui::ImageButton((ImTextureID)0, size, uv0, uv1, frame_padding, bg_col, tint_col)) {
+							//	//ImGui::OpenPopup("texture_menu_popup");
+							//	//popupFlag = true;
+							//}
+				//		}
 
 						if (ImGui::BeginDragDropTarget())
 						{

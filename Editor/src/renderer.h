@@ -1,6 +1,7 @@
 #pragma once
 
 #include "component/terrain.h"
+#include "GL/glew.h"
 
 using namespace Fury;
 
@@ -46,7 +47,7 @@ namespace Editor {
 			int ringFixupIndiceCount, int smallSquareIndiceCount, int clipmapResolution, 
 			glm::vec3& camPos, glm::vec3& fakeDisplacement);*/
 		void drawPartOfTerrain(GlewContext* glew, float x, float z, unsigned int programID, unsigned int indiceCount);
-		void drawMeshRendererRecursively(Entity* entity, glm::mat4& PV, glm::vec3& camPos);
+		//void drawMeshRendererRecursively(Entity* entity, glm::mat4& PV, glm::vec3& camPos);
 		Entity* detectAndGetEntityId(float mouseX, float mouseY);
 		void drawMeshRendererForPickingRecursively(Entity* entity);
 	};

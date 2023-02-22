@@ -1,48 +1,15 @@
-//#version 330 core
-
-//#define texture0 1
-//#define texture1 1
-//#define texture2 1
-//#define texture3 1
-//#define texture4 1
+#version 330 core
 
 out vec4 FragColor;
 in vec2 TexCoords;
 in vec3 WorldPos;
 in vec3 Normal;
 
-// material parameters
-//uniform sampler2D albedoMap;
-//uniform sampler2D normalMap;
-//uniform sampler2D metallicMap;
-//uniform sampler2D roughnessMap;
-//uniform sampler2D aoMap;
-
-
-
-#ifdef TEXTURE0
 uniform sampler2D texture0; // albedo
-#endif
-
-#ifdef TEXTURE1
 uniform sampler2D texture1; // normal
-#endif
-
-#ifdef TEXTURE2
 uniform sampler2D texture2; // metallic
-#endif
-
-#ifdef TEXTURE3
 uniform sampler2D texture3; // roughness
-#endif
-
-#ifdef TEXTURE4
 uniform sampler2D texture4; // ao
-#endif
-
-// lights
-//uniform vec3 lightPositions[4];
-//uniform vec3 lightColors[4];
 
 uniform vec3 camPos;
 
@@ -53,7 +20,6 @@ const float PI = 3.14159265359;
 // mapping the usual way for performance anways; I do plan make a note of this 
 // technique somewhere later in the normal mapping tutorial.
 
-#ifdef TEXTURE1
 vec3 getNormalFromMap()
 {
     vec3 tangentNormal = texture(texture1, TexCoords).xyz * 2.0 - 1.0;
@@ -70,7 +36,6 @@ vec3 getNormalFromMap()
 
     return normalize(TBN * tangentNormal);
 }
-#endif
 
 // ----------------------------------------------------------------------------
 float DistributionGGX(vec3 N, vec3 H, float roughness)
@@ -114,41 +79,12 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 }
 // ----------------------------------------------------------------------------
 void main()
-{		
-//    vec3 albedo     = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
-//    float metallic  = texture(metallicMap, TexCoords).r;
-//    float roughness = texture(roughnessMap, TexCoords).r;
-//    float ao        = texture(aoMap, TexCoords).r;
-
-    #ifdef TEXTURE0
+{
     vec3 albedo = pow(texture(texture0, TexCoords).rgb, vec3(2.2));
-    #else
-    vec3 albedo = vec3(1,1,1);
-    #endif
-
-    #ifdef TEXTURE1
     vec3 N = getNormalFromMap();
-    #else
-    vec3 N = normalize(Normal);
-    #endif
-
-    #ifdef TEXTURE2
     float metallic  = texture(texture2, TexCoords).r;
-    #else
-    float metallic = 0.2f;
-    #endif
-
-    #ifdef TEXTURE3
     float roughness = texture(texture3, TexCoords).r;
-    #else
-    float roughness = 0.5f;
-    #endif
-
-    #ifdef TEXTURE4
     float ao = texture(texture4, TexCoords).r;
-    #else
-    float ao = 0.5f;
-    #endif
 
     vec3 V = normalize(camPos - WorldPos);
 
@@ -207,8 +143,6 @@ void main()
     color = color / (color + vec3(1.0));
     // gamma correct
     color = pow(color, vec3(1.0/2.2)); 
-
-    color *= ao; 
 
     FragColor = vec4(color, 1.0);
 }

@@ -97,7 +97,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>assimp-vc142-mt.lib;glfw3dll.lib;glew32s.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>FreeImage.lib;assimp-vc142-mt.lib;glfw3dll.lib;glew32s.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)src\lib;$(SolutionDir)$(Platform)\$(Configuration);</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -120,7 +120,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>assimp-vc142-mt.lib;glfw3dll.lib;glew32s.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>FreeImage.lib;assimp-vc142-mt.lib;glfw3dll.lib;glew32s.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)src\lib;$(SolutionDir)$(Platform)\$(Configuration);</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -139,7 +139,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>assimp-vc142-mt.lib;glfw3dll.lib;glew32s.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>FreeImage.lib;assimp-vc142-mt.lib;glfw3dll.lib;glew32s.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)src\lib;$(SolutionDir)$(Platform)\$(Configuration);</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -162,7 +162,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>assimp-vc142-mt.lib;glfw3dll.lib;glew32s.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>FreeImage.lib;assimp-vc142-mt.lib;glfw3dll.lib;glew32s.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)src\lib;$(SolutionDir)$(Platform)\$(Configuration);</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -264,6 +264,7 @@
     <ClInclude Include="src\include\assimp\XmlParser.h" />
     <ClInclude Include="src\include\assimp\XMLTools.h" />
     <ClInclude Include="src\include\assimp\ZipArchiveIOSystem.h" />
+    <ClInclude Include="src\include\FreeImage.h" />
     <ClInclude Include="src\include\GLFW\glfw3.h" />
     <ClInclude Include="src\include\GLFW\glfw3native.h" />
     <ClInclude Include="src\include\glm\common.hpp" />
@@ -562,8 +563,10 @@
     <ClInclude Include="src\include\rapidXML\rapidxml_iterators.hpp" />
     <ClInclude Include="src\include\rapidXML\rapidxml_print.hpp" />
     <ClInclude Include="src\include\rapidXML\rapidxml_utils.hpp" />
+    <ClInclude Include="src\include\stb_image.h" />
     <ClInclude Include="src\input.h" />
     <ClInclude Include="src\filesystem\meshfile.h" />
+    <ClInclude Include="src\material\pbrmaterial.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\saveloadsystem.h" />
     <ClInclude Include="src\scene.h" />
@@ -596,6 +599,7 @@
     <ClCompile Include="src\include\lodepng\lodepng.cpp" />
     <ClCompile Include="src\input.cpp" />
     <ClCompile Include="src\filesystem\meshfile.cpp" />
+    <ClCompile Include="src\material\pbrmaterial.cpp" />
     <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\saveloadsystem.cpp" />
     <ClCompile Include="src\scene.cpp" />
@@ -760,6 +764,23 @@
     <None Include="src\shader\PBR.vert" />
     <None Include="src\shader\PBRNoTexture.frag" />
     <None Include="src\shader\PBRNoTexture.vert" />
+    <None Include="src\shader\pbr\background.frag" />
+    <None Include="src\shader\pbr\background.vert" />
+    <None Include="src\shader\pbr\brdf.frag" />
+    <None Include="src\shader\pbr\brdf.vert" />
+    <None Include="src\shader\pbr\cubemap.vert" />
+    <None Include="src\shader\pbr\equirectangular_to_cubemap.frag" />
+    <None Include="src\shader\pbr\irradiance_convolution.frag" />
+    <None Include="src\shader\pbr\newport_loft.hdr" />
+    <None Include="src\shader\pbr\pbr.frag" />
+    <None Include="src\shader\pbr\pbr.vert" />
+    <None Include="src\shader\pbr\prefilter.frag" />
+    <None Include="src\shader\temp\2.1.1.background.fs" />
+    <None Include="src\shader\temp\2.1.1.background.vs" />
+    <None Include="src\shader\temp\2.1.1.cubemap.vs" />
+    <None Include="src\shader\temp\2.1.1.equirectangular_to_cubemap.fs" />
+    <None Include="src\shader\temp\2.1.1.pbr.fs" />
+    <None Include="src\shader\temp\2.1.1.pbr.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
