@@ -1230,6 +1230,9 @@
     <ClInclude Include="src\include\stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\material\globalvolume.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -1308,6 +1311,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\material\pbrmaterial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\material\globalvolume.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

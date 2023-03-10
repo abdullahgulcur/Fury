@@ -58,7 +58,14 @@ namespace Fury {
 		unsigned int programID;
 		unsigned int elevationMapTexture;
 		unsigned int normalMapTexture;
-		unsigned int diffuseMapTexture;
+
+		unsigned int diffuse;
+		unsigned int normal;
+		unsigned int metalness;
+		unsigned int roughness;
+		unsigned int ao;
+		unsigned int displacement;
+
 		std::vector<unsigned int> elevationMapTextures;
 		std::vector<unsigned int> normalMapTextures;
 
@@ -143,8 +150,11 @@ namespace Fury {
 		void loadMapFromDiscAsync(int level, int tileIndex, int x, int z);
 		void updateHeightMapTextureArray(int level, unsigned char* heights);
 		void updateHeightMapTextureArrayPartialVertical(int level, unsigned char* heights);
+		void updateHeightMapTextureArrayPartialHorizontal(int level, unsigned char* heights);
 		void loadTerrainChunkOnGraphicsMemoryVertical(int lodLevel, unsigned char*& heightData, int dir);
+		void loadTerrainChunkOnGraphicsMemoryHorizontal(int lodLevel, unsigned char*& heightData, int dir);
 		void writeHeightDataToGPUBufferVertical(int level, unsigned char* buffer, int z, int x);
+		void writeHeightDataToGPUBufferHorizontal(int level, unsigned char* buffer, int z, int x);
 		void loadAllLowDetailMipStack(int lodLevel);
 		void deleteAllLowDetailMipStack();
 		void deleteLowDetailMipStack(int lodLevel);

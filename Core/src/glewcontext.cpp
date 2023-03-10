@@ -31,12 +31,12 @@ namespace Fury {
 			fprintf(stderr, "Failed to initialize GLEW\n");
 
 		//glFrontFace(GL_CCW); // change this to ccw, its default value
-		//glCullFace(GL_BACK);
+		glCullFace(GL_BACK);
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		//glLineWidth(0.5f);
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
-		//glEnable(GL_CULL_FACE);
+		glEnable(GL_CULL_FACE);
 		// enable seamless cubemap sampling for lower mip levels in the pre-filter map.
 		//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	}
@@ -463,6 +463,9 @@ namespace Fury {
 
 	void GlewContext::generateTexture(unsigned int& textureId, unsigned width, unsigned height, unsigned char* image) {
 
+		float maxAniso = 0.0f;
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
+
 		glGenTextures(1, &textureId);
 		glBindTexture(GL_TEXTURE_2D, textureId);
 
@@ -470,6 +473,8 @@ namespace Fury {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAniso);
 
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 		glGenerateMipmap(GL_TEXTURE_2D);

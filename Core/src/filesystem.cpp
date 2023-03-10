@@ -160,6 +160,7 @@ namespace Fury {
 		whiteTexture = new TextureFile(TextureType::WHITE);
 		flatNormalMapTexture = new TextureFile(TextureType::NORMAL_MAP_FLAT);
 		pbrMaterial = new PBRMaterial();
+		globalVolume = new GlobalVolume();
 
 		//pbrMaterialNoTexture = new MaterialFile();
 		//pbrMat = new MaterialFile();

@@ -158,67 +158,20 @@ namespace Editor {
 
 		GlewContext* glew = Core::instance->glewContext;
 		PBRMaterial* pbrMaterial = Core::instance->fileSystem->pbrMaterial;
+		GlobalVolume* globalVolume = Core::instance->fileSystem->globalVolume;
 
 		glm::mat4& VP = camera->projectionViewMatrix;
 		glm::mat4& view = camera->ViewMatrix;
 		glm::mat4& projection = camera->ProjectionMatrix;
 		glm::vec3& camPos = camera->position;
 
-		//-----
-
-		unsigned int pbrShaderProgramId = pbrMaterial->pbrShaderProgramId;
-		glew->useProgram(pbrShaderProgramId);
-		glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "projection"), 1, GL_FALSE, &projection[0][0]);
-
-		unsigned int backgroundShaderProgramId = pbrMaterial->backgroundShaderProgramId;
-		glew->useProgram(backgroundShaderProgramId);
-		glew->uniformMatrix4fv(glew->getUniformLocation(backgroundShaderProgramId, "projection"), 1, GL_FALSE, &projection[0][0]);
-
-		//glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, "camPos"), 1, &camPos[0]);
-		//glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "projection"), 1, GL_FALSE, &projection[0][0]);
-		//glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "view"), 1, GL_FALSE, &view[0][0]);
-
-		//// render light source (simply re-render sphere at light positions)
-		//// this looks a bit off as we use the same shader, but it'll make their positions obvious and 
-		//// keeps the codeprint small.
-		//for (unsigned int i = 0; i < sizeof(pbrMaterial->lightPositions) / sizeof(pbrMaterial->lightPositions[0]); ++i) {
-
-		//	glm::vec3 newPos = pbrMaterial->lightPositions[i];
-		//	std::string str = "lightPositions[" + std::to_string(i) + "]";
-		//	glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, &str[0]), 1, &newPos[0]);
-		//	str = "lightColors[" + std::to_string(i) + "]";
-		//	glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, &str[0]), 1, &pbrMaterial->lightColors[i][0]);
-		//}
-
-		//// bind pre-computed IBL data
-		//glew->activeTexture(GL_TEXTURE0);
-		//glew->bindTexture(GL_TEXTURE_CUBE_MAP, pbrMaterial->irradianceMap);
-		//glew->activeTexture(GL_TEXTURE1);
-		//glew->bindTexture(GL_TEXTURE_CUBE_MAP, pbrMaterial->prefilterMap);
-		//glew->activeTexture(GL_TEXTURE2);
-		//glew->bindTexture(GL_TEXTURE_2D, pbrMaterial->brdfLUTTexture);
-
-		//-----
 		Core::instance->glewContext->bindFrameBuffer(camera->FBO);
 		Core::instance->glewContext->enable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
 		Core::instance->glewContext->depthFunc(GL_LEQUAL); // set depth function to less than AND equal for skybox depth trick.
 
 		Core::instance->glewContext->enable(GL_TEXTURE_CUBE_MAP_SEAMLESS); // enable depth testing (is disabled for rendering screen-space quad)
-		//glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
 		Core::instance->glewContext->viewport(Editor::instance->menu->sceneRegion.x, Editor::instance->menu->sceneRegion.y);
 		Core::instance->glewContext->clearScreen(glm::vec3(0.3f, 0.3f, 0.3f));
-
-		glew->useProgram(pbrShaderProgramId);
-		glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, "camPos"), 1, &camPos[0]);
-		glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "view"), 1, GL_FALSE, &view[0][0]);
-
-		// bind pre-computed IBL data
-		glew->activeTexture(GL_TEXTURE0);
-		glew->bindTexture(GL_TEXTURE_CUBE_MAP, pbrMaterial->irradianceMap);
-		glew->activeTexture(GL_TEXTURE1);
-		glew->bindTexture(GL_TEXTURE_CUBE_MAP, pbrMaterial->prefilterMap);
-		glew->activeTexture(GL_TEXTURE2);
-		glew->bindTexture(GL_TEXTURE_2D, pbrMaterial->brdfLUTTexture);
 
 		std::stack<Entity*> entStack;
 		entStack.push(scene->root);
@@ -229,20 +182,20 @@ namespace Editor {
 			entStack.pop();
 
 			/* Gizmo Part */
-			//GameCamera* gamecamera = popped->getComponent<GameCamera>();
-			//if (gamecamera != NULL && Editor::instance->menu->selectedEntity == popped) // bunu ayir
-			//	gamecamera->drawEditorGizmos(VP, popped->transform->model);
+			GameCamera* gamecamera = popped->getComponent<GameCamera>();
+			if (gamecamera != NULL && Editor::instance->menu->selectedEntity == popped) // bunu ayir
+				gamecamera->drawEditorGizmos(VP, popped->transform->model);
 			/* Gizmo Part End*/
 
-			//Terrain* terrain = popped->getComponent<Terrain>();
-			//if (terrain != NULL && scene->primaryCamera != NULL) {
-			//	terrain->update(); // that asshole should not stay here...
-			//	//glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			Terrain* terrain = popped->getComponent<Terrain>();
+			if (terrain != NULL && scene->primaryCamera != NULL) {
+				terrain->update(); // that asshole should not stay here...
+				//glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 
 			//	auto start = high_resolution_clock::now();
 
-			//	Renderer::drawTerrain(Editor::instance->sceneCamera, scene->primaryCamera, terrain);
+				Renderer::drawTerrain(Editor::instance->sceneCamera, scene->primaryCamera, terrain);
 
 			//	auto stop = high_resolution_clock::now();
 			//	auto duration = duration_cast<microseconds>(stop - start);
@@ -253,9 +206,7 @@ namespace Editor {
 			//	//std::cout << "Time taken by terrain draw function (instanced): " << duration.count() << " microseconds" << std::endl;
 
 			//	//glew->polygonMode(GL_BACK, GL_TRIANGLES);
-			//}
-
-			
+			}
 
 			for (Transform*& child : popped->transform->children)
 				entStack.push(child->entity);
@@ -280,18 +231,31 @@ namespace Editor {
 
 			case ShaderType::PBR: {
 
+				unsigned int pbrShaderProgramId = pbrMaterial->pbrShaderProgramId;
+				glew->useProgram(pbrShaderProgramId);
+				glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "projection"), 1, GL_FALSE, &projection[0][0]);
+				glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "view"), 1, GL_FALSE, &view[0][0]);
 				glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "model"), 1, GL_FALSE, &model[0][0]);
+				glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, "camPos"), 1, &camPos[0]);
+
+				// bind pre-computed IBL data
+				glew->activeTexture(GL_TEXTURE0);
+				glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->irradianceMap);
+				glew->activeTexture(GL_TEXTURE1);
+				glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->prefilterMap);
+				glew->activeTexture(GL_TEXTURE2);
+				glew->bindTexture(GL_TEXTURE_2D, globalVolume->brdfLUTTexture);
 
 				for (int i = 0; i < mat->textureFiles.size(); i++) {
 
 					std::string texStr = "texture" + std::to_string(i);
-					glew->activeTexture(GL_TEXTURE0 + i + 3);
+					glew->activeTexture(GL_TEXTURE3 + i);
 					glew->bindTexture(GL_TEXTURE_2D, mat->textureFiles[i]->textureId);
 				}
 
 				glew->bindVertexArray(mesh->VAO);
 				glew->drawElements(GL_TRIANGLES, mesh->indiceCount, GL_UNSIGNED_INT, (void*)0);
-				//glew->bindVertexArray(0);
+				glew->bindVertexArray(0);
 
 				break;
 			}
@@ -303,28 +267,17 @@ namespace Editor {
 			drawCallCount++;
 		}
 
-		// render light source (simply re-render sphere at light positions)
-		// this looks a bit off as we use the same shader, but it'll make their positions obvious and 
-		// keeps the codeprint small.
-		for (unsigned int i = 0; i < sizeof(pbrMaterial->lightPositions) / sizeof(pbrMaterial->lightPositions[0]); ++i) {
-
-			glm::vec3 newPos = pbrMaterial->lightPositions[i];
-			std::string str = "lightPositions[" + std::to_string(i) + "]";
-			glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, &str[0]), 1, &newPos[0]);
-			str = "lightColors[" + std::to_string(i) + "]";
-			glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, &str[0]), 1, &pbrMaterial->lightColors[i][0]);
-		}
-
 		// render skybox (render as last to prevent overdraw)
+
+		unsigned int backgroundShaderProgramId = globalVolume->backgroundShaderProgramId;
 		glew->useProgram(backgroundShaderProgramId);
+		glew->uniformMatrix4fv(glew->getUniformLocation(backgroundShaderProgramId, "projection"), 1, GL_FALSE, &projection[0][0]);
 		glew->uniformMatrix4fv(glew->getUniformLocation(backgroundShaderProgramId, "view"), 1, GL_FALSE, &view[0][0]);
 		glew->activeTexture(GL_TEXTURE0);
-		glew->bindTexture(GL_TEXTURE_CUBE_MAP, pbrMaterial->envCubemap);
-		//glew->uniform1i(glew->getUniformLocation(backgroundShaderProgramId, "environmentMap"), 0);
-
-		//glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap); // display irradiance map
-		//glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap); // display prefilter map
-		pbrMaterial->renderCube();
+		glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->envCubemap);
+		glDisable(GL_CULL_FACE);
+		globalVolume->renderCube();
+		glEnable(GL_CULL_FACE);
 
 		Core::instance->glewContext->bindFrameBuffer(0);
 	}
@@ -467,6 +420,7 @@ namespace Editor {
 		//float scale = terrain->triangleSize;
 		int level = terrain->getMaxMipLevel(RESOLUTION, TILE_SIZE);// terrain->clipmapLevel;
 		int clipmapResolution = terrain->clipmapResolution;
+		float mapSize = clipmapResolution * (2 << level) * 2;
 		//int worldSize = scale * clipmapResolution * (2 << level);
 		//unsigned int elevationMapSize = terrain->elevationMapSize;
 		int programID = terrain->programID;
@@ -483,37 +437,6 @@ namespace Editor {
 		float* lightColAddr = &glm::vec3(1, 1, 1)[0];
 
 		int elevationMapTexture = terrain->elevationMapTexture;
-		int diffuseMapTexture = terrain->diffuseMapTexture;
-		//int normalMapTexture = terrain->normalMapTexture;
-
-		glew->useProgram(programID);
-		glew->uniformMatrix4fv(glew->getUniformLocation(programID, "PV"), 1, 0, pvAddr);
-
-		//glew->uniform1i(glew->getUniformLocation(programID, "patchRes"), level);
-
-		//glew->uniform1i(glew->getUniformLocation(programID, "mapSize"), elevationMapSize);
-		//glew->uniform1i(glew->getUniformLocation(programID, "clipMapSize"), worldSize);
-		glew->uniform3fv(glew->getUniformLocation(programID, "camPos"), 1, &camera->position[0]);
-		glew->uniform3fv(glew->getUniformLocation(programID, "lightDir"), 1, lightDirAddr);
-		//glew->uniform3fv(glew->getUniformLocation(programID, "lightColor"), 1, lightColAddr);
-		//glew->uniform1f(glew->getUniformLocation(programID, "triSize"), scale);
-
-		glew->activeTexture(0x84C0);
-		glew->bindTexture(0x0DE1, diffuseMapTexture);
-		glew->uniform1i(glew->getUniformLocation(programID, "grassTex"), 0);
-
-		glew->activeTexture(0x84C1);
-		//glew->bindTexture(0x0DE1, elevationMapTexture);
-		glew->bindTexture(0x8C1A, elevationMapTexture);
-		//glew->uniform1i(glew->getUniformLocation(programID, "heightmap"), 0);
-		glew->uniform1i(glew->getUniformLocation(programID, "heightmapArray"), 1);
-
-
-		//glew->activeTexture(0x84C1);
-		//glew->bindTexture(0x0DE1, normalMapTexture);
-		//glew->uniform1i(glew->getUniformLocation(programID, "normalmap"), 1);
-
-		glew->useProgram(programID);
 
 		int blockVAO = terrain->blockVAO;
 		int ringFixUpVAO = terrain->ringFixUpVAO;
@@ -526,9 +449,37 @@ namespace Editor {
 		int smallSquareIndiceCount = terrain->smallSquareIndices.size();
 		int interiorTrimIndiceCount = terrain->interiorTrimIndices.size();
 		int outerDegenerateIndiceCount = terrain->outerDegenerateIndices.size();
-		
-		//Renderer::drawInternalPart(programID, blockVAO, ringFixUpVAO, smallSquareVAO, blockIndiceCount, 
-		//	ringFixUpIndiceCount, smallSquareIndiceCount, clipmapResolution, camPos, fakeDisplacement);
+
+		GlobalVolume* globalVolume = Core::instance->fileSystem->globalVolume;
+
+		glew->useProgram(programID);
+		glew->uniformMatrix4fv(glew->getUniformLocation(programID, "PV"), 1, 0, pvAddr);
+		glew->uniform3fv(glew->getUniformLocation(programID, "camPos"), 1, &camera->position[0]);
+		glew->uniform1f(glew->getUniformLocation(programID, "heightScale"), 0.1f);
+		glew->uniform1f(glew->getUniformLocation(programID, "mapSize"), mapSize);
+		//glew->uniform3fv(glew->getUniformLocation(programID, "lightDir"), 1, lightDirAddr);
+
+		// bind pre-computed IBL data
+		glew->activeTexture(GL_TEXTURE0);
+		glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->irradianceMap);
+		glew->activeTexture(GL_TEXTURE1);
+		glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->prefilterMap);
+		glew->activeTexture(GL_TEXTURE2);
+		glew->bindTexture(GL_TEXTURE_2D, globalVolume->brdfLUTTexture);
+		glew->activeTexture(GL_TEXTURE3);
+		glew->bindTexture(GL_TEXTURE_2D, terrain->diffuse);
+		glew->activeTexture(GL_TEXTURE4);
+		glew->bindTexture(GL_TEXTURE_2D, terrain->normal);
+		glew->activeTexture(GL_TEXTURE5);
+		glew->bindTexture(GL_TEXTURE_2D, terrain->metalness);
+		glew->activeTexture(GL_TEXTURE6);
+		glew->bindTexture(GL_TEXTURE_2D, terrain->roughness);
+		glew->activeTexture(GL_TEXTURE7);
+		glew->bindTexture(GL_TEXTURE_2D, terrain->ao);
+		glew->activeTexture(GL_TEXTURE8);
+		glew->bindTexture(GL_TEXTURE_2D, terrain->displacement);
+		glew->activeTexture(GL_TEXTURE9);
+		glew->bindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTexture);
 
 		// It has to be two. 
 		int patchWidth = 2;

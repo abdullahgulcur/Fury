@@ -15,27 +15,16 @@ namespace Fury {
 
 		unsigned int pbrShaderProgramId;
 
-		// programin biryerlerinde daima ortak kullanilacak
-		// Class GlobalVolume
-		unsigned int equirectangularToCubemapShaderProgramId;
-		unsigned int irradianceShaderProgramId;
-		unsigned int prefilterShaderProgramId;
-		unsigned int brdfShaderProgramId;
-		unsigned int backgroundShaderProgramId;
+		//unsigned int irradianceMap = 0;
+		//unsigned int prefilterMap = 0;
+		//unsigned int brdfLUTTexture = 0;
 
-		// 0, sonra hdri tasiyinca setlenebilir.
-		unsigned int irradianceMap;
-		unsigned int prefilterMap;
-		unsigned int brdfLUTTexture;
 
-		unsigned int envCubemap;
-
-		unsigned int cubeVAO;
-		unsigned int quadVAO;
+		//unsigned int quadVAO;
 
 		// bunlar inherit edilebilir?
-		glm::vec3 lightPositions[4];
-		glm::vec3 lightColors[4];
+		//glm::vec3 lightPositions[4];
+		//glm::vec3 lightColors[4];
 
 		//----------------
 
@@ -61,9 +50,9 @@ namespace Fury {
 
 
 		PBRMaterial();
-		void createCubeVAO();
-		void renderCube();
-		void createQuadVAO();
-		void renderQuad();
+		//void createCubeVAO();
+		//void renderCube();
+		//void createQuadVAO();
+		//void renderQuad();
 	};
 }

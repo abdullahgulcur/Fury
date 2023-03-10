@@ -155,6 +155,8 @@ namespace Fury {
 			blockPositions[i * 12 + 8] = position;
 			position.y -= patchOffset;
 
+			Terrain::setClipmapPositionVertical(i, position.y - (1 << i));
+
 			// 9
 			position.y += patchTranslation;
 			blockPositions[i * 12 + 9] = position;
@@ -166,16 +168,6 @@ namespace Fury {
 
 			// 11
 			position.x += patchTranslation;
-
-			int clipMapCenterPosX = position.x - (1 << i);
-			int currentTileIndex_X = clipMapCenterPosX / parcelSizeInReal;
-		//	if (currentTileIndices[i].x != currentTileIndex_X)
-		//		changeCurrentTileIndex_X(i, currentTileIndex_X);
-
-
-			/*if (terrain->clipmapPositions[i].x != clipMapCenterPosX)
-				terrain->updateStreamFrom_X(i, clipMapCenterPosX);*/
-
 			blockPositions[i * 12 + 11] = position;
 
 			Terrain::setClipmapPositionHorizontal(i, position.x - (1 << i));
@@ -593,12 +585,44 @@ namespace Fury {
 
 		programID = glew->loadShaders("C:/Projects/Fury/Core/src/shader/clipmap.vert",
 			"C:/Projects/Fury/Core/src/shader/clipmap.frag");
+		glew->useProgram(programID);
+		glew->uniform1i(glew->getUniformLocation(programID, "irradianceMap"), 0);
+		glew->uniform1i(glew->getUniformLocation(programID, "prefilterMap"), 1);
+		glew->uniform1i(glew->getUniformLocation(programID, "brdfLUT"), 2);
+		glew->uniform1i(glew->getUniformLocation(programID, "texture0"), 3);
+		glew->uniform1i(glew->getUniformLocation(programID, "texture1"), 4);
+		glew->uniform1i(glew->getUniformLocation(programID, "texture2"), 5);
+		glew->uniform1i(glew->getUniformLocation(programID, "texture3"), 6);
+		glew->uniform1i(glew->getUniformLocation(programID, "texture4"), 7);
+		glew->uniform1i(glew->getUniformLocation(programID, "texture5"), 8);
+		glew->uniform1i(glew->getUniformLocation(programID, "heightmapArray"), 9);
 
 		unsigned int width;
 		unsigned int height;
 		std::vector<unsigned char> image;
-		lodepng::decode(image, width, height, "testgrid.png");
-		glew->generateTexture(diffuseMapTexture, width, height, &image[0]);
+		lodepng::decode(image, width, height, "grass_a.png");
+		glew->generateTexture(diffuse, width, height, &image[0]);
+		image.clear();
+
+		lodepng::decode(image, width, height, "grass_n.png");
+		glew->generateTexture(normal, width, height, &image[0]);
+		image.clear();
+
+		lodepng::decode(image, width, height, "grass_m.png");
+		glew->generateTexture(metalness, width, height, &image[0]);
+		image.clear();
+
+		lodepng::decode(image, width, height, "grass_r.png");
+		glew->generateTexture(roughness, width, height, &image[0]);
+		image.clear();
+
+		lodepng::decode(image, width, height, "grass_ao.png");
+		glew->generateTexture(ao, width, height, &image[0]);
+		image.clear();
+
+		lodepng::decode(image, width, height, "grass_d.png");
+		glew->generateTexture(displacement, width, height, &image[0]);
+		image.clear();
 	}
 
 	void Terrain::loadAllLowDetailMipStack(int lodLevel) {
@@ -716,6 +740,23 @@ namespace Fury {
 		//		it.join();
 	}
 
+	void Terrain::loadTerrainChunkOnGraphicsMemoryHorizontal(int lodLevel, unsigned char*& heightData, int dir) {
+
+		int gpuParcels = MEM_TILE_ONE_SIDE - 2;
+		heightData = new unsigned char[gpuParcels * TILE_SIZE * TILE_SIZE * 2];
+
+		for (int i = 1; i < MEM_TILE_ONE_SIDE - 1; i++) {
+
+			if (dir == -1) {
+				Terrain::writeHeightDataToGPUBufferHorizontal(lodLevel, heightData, 1, i);
+			}
+
+			if (dir == 1) {
+				Terrain::writeHeightDataToGPUBufferHorizontal(lodLevel, heightData, gpuParcels, i);
+			}
+		}
+	}
+
 	void Terrain::updateHeightDataOnGraphicsMemory(int lodLevel, unsigned char*& heightData) {
 
 		int gpuParcels = MEM_TILE_ONE_SIDE - 2;
@@ -741,12 +782,32 @@ namespace Fury {
 	void Terrain::writeHeightDataToGPUBufferVertical(int level, unsigned char* buffer, int z, int x) {
 
 		int texWidth = TILE_SIZE;
-		int startZ = (z - 1) * TILE_SIZE;
+		//int startZ = (z - 1) * TILE_SIZE;
+		int startZ = ((toroidalUpdateIndices[level].z + z - 1) % 4) * TILE_SIZE;
 
 		for (int i = 0; i < TILE_SIZE; i++) {
 			for (int j = 0; j < TILE_SIZE; j++) {
 
 				int indexInGPUBuffer = ((i + startZ) * texWidth + j) * 2;
+				int indexInTile = (i * TILE_SIZE + j) * 2;
+				int tileIndex = z * MEM_TILE_ONE_SIDE + x;
+				buffer[indexInGPUBuffer] = tiles[level][tileIndex][indexInTile];
+				buffer[indexInGPUBuffer + 1] = tiles[level][tileIndex][indexInTile + 1];
+			}
+		}
+	}
+
+	void Terrain::writeHeightDataToGPUBufferHorizontal(int level, unsigned char* buffer, int z, int x) {
+
+		int gpuParcels = MEM_TILE_ONE_SIDE - 2;
+		int texWidth = TILE_SIZE * gpuParcels;
+		//int startX = (x - 1) * TILE_SIZE;
+		int startX = ((toroidalUpdateIndices[level].x + x - 1) % 4) * TILE_SIZE;
+
+		for (int i = 0; i < TILE_SIZE; i++) {
+			for (int j = 0; j < TILE_SIZE; j++) {
+
+				int indexInGPUBuffer = (i * texWidth + j + startX) * 2;
 				int indexInTile = (i * TILE_SIZE + j) * 2;
 				int tileIndex = z * MEM_TILE_ONE_SIDE + x;
 				buffer[indexInGPUBuffer] = tiles[level][tileIndex][indexInTile];
@@ -807,9 +868,10 @@ namespace Fury {
 		
 	}
 
+	//lode png kullanma, freeimage daha hizli
 	unsigned char* Terrain::loadHeightmapFromDisk(int level, int x, int z) {
 
-		std::string path = "map_" + std::to_string(level) + '_' + std::to_string(z) + '_' + std::to_string(x) + "_.png";
+		std::string path = "textures/map_" + std::to_string(level) + '_' + std::to_string(z) + '_' + std::to_string(x) + "_.png";
 		std::vector<unsigned char> out;
 		unsigned int w;
 		unsigned int h;
@@ -888,6 +950,17 @@ namespace Fury {
 		int size = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2);
 		glew->bindTexture(0x8C1A, elevationMapTexture);
 		glew->texSubImage3D(0x8C1A, 0, pos, 0, level, TILE_SIZE, size, 1, 0x8227, GL_UNSIGNED_BYTE, &heights[0]);
+		glew->bindTexture(0x8C1A, 0);
+	}
+
+	void Terrain::updateHeightMapTextureArrayPartialHorizontal(int level, unsigned char* heights) {
+
+		int pos = toroidalUpdateIndices[level].z * TILE_SIZE;
+
+		GlewContext* glew = Core::instance->glewContext;
+		int size = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2);
+		glew->bindTexture(0x8C1A, elevationMapTexture);
+		glew->texSubImage3D(0x8C1A, 0, 0, pos, level, size, TILE_SIZE, 1, 0x8227, GL_UNSIGNED_BYTE, &heights[0]);
 		glew->bindTexture(0x8C1A, 0);
 	}
 
@@ -1159,8 +1232,6 @@ namespace Fury {
 
 			if (currentTileIndices[level].x != currentTileIndex) {
 
-				//
-				//
 				int offset = currentTileIndex - currentTileIndices[level].x;
 
 				if (offset == 1) {
@@ -1168,50 +1239,45 @@ namespace Fury {
 					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++)
 						delete[] tiles[level][i * MEM_TILE_ONE_SIDE];
 
-					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++) {
-						for (int j = 0; j < MEM_TILE_ONE_SIDE - 1; j++) {
+					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++)
+						for (int j = 0; j < MEM_TILE_ONE_SIDE - 1; j++)
 							tiles[level][i * MEM_TILE_ONE_SIDE + j] = tiles[level][i * MEM_TILE_ONE_SIDE + j + 1];
-						}
-					}
 
-					//
-					auto start = high_resolution_clock::now();
+					//auto start = high_resolution_clock::now();
 					std::vector<std::thread> pool;
 
 					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++) {
 						int offset = MEM_TILE_ONE_SIDE / 2;
 						std::thread th(&Terrain::loadMapFromDiscAsync, this, level, (i + 1) * MEM_TILE_ONE_SIDE - 1, currentTileIndex + offset - 1, currentTileIndices[level].z - offset + i);
 						pool.push_back(std::move(th));
-						
 					}
 
 					for (auto& it : pool)
 						if (it.joinable())
 							it.join();
 
-					//
-					auto stop = high_resolution_clock::now();
-					auto duration = duration_cast<microseconds>(stop - start);
-					std::cout << "Time taken by disc load function: " << duration.count() << " microseconds" << std::endl;
+					//auto stop = high_resolution_clock::now();
+					//auto duration = duration_cast<microseconds>(stop - start);
+					//std::cout << "Time taken by disc load function: " << duration.count() << " microseconds" << std::endl;
 
-					start = high_resolution_clock::now();
+					//start = high_resolution_clock::now();
 
 					Terrain::loadLowDetailMipStackAtLevel(level);
 
-					stop = high_resolution_clock::now();
-					duration = duration_cast<microseconds>(stop - start);
-					std::cout << "Time taken by mipstack load function: " << duration.count() << " microseconds" << std::endl;
+					//stop = high_resolution_clock::now();
+					//duration = duration_cast<microseconds>(stop - start);
+					//std::cout << "Time taken by mipstack load function: " << duration.count() << " microseconds" << std::endl;
 
-					start = high_resolution_clock::now();
+					//start = high_resolution_clock::now();
 
 					unsigned char* heightData = NULL;
 					Terrain::loadTerrainChunkOnGraphicsMemoryVertical(level, heightData, 1);
 					Terrain::updateHeightMapTextureArrayPartialVertical(level, heightData);
 					delete[] heightData;
 
-					stop = high_resolution_clock::now();
-					duration = duration_cast<microseconds>(stop - start);
-					std::cout << "Time taken by gpu load function: " << duration.count() << " microseconds" << std::endl;
+					//stop = high_resolution_clock::now();
+					//duration = duration_cast<microseconds>(stop - start);
+					//std::cout << "Time taken by gpu load function: " << duration.count() << " microseconds" << std::endl;
 
 					toroidalUpdateIndices[level].x++;
 					toroidalUpdateIndices[level].x = (toroidalUpdateIndices[level].x + (MEM_TILE_ONE_SIDE - 2)) % (MEM_TILE_ONE_SIDE - 2);
@@ -1224,19 +1290,16 @@ namespace Fury {
 					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++)
 						delete[] tiles[level][(i + 1) * MEM_TILE_ONE_SIDE - 1];
 
-					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++) {
-						for (int j = MEM_TILE_ONE_SIDE - 1; j >= 0; j--) {
+					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++)
+						for (int j = MEM_TILE_ONE_SIDE - 1; j >= 0; j--)
 							tiles[level][i * MEM_TILE_ONE_SIDE + j] = tiles[level][i * MEM_TILE_ONE_SIDE + j - 1];
-						}
-					}
 
-					//
-					auto start = high_resolution_clock::now();
+					
+					//auto start = high_resolution_clock::now();
 
 					std::vector<std::thread> pool;
 					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++) {
 						int offset = MEM_TILE_ONE_SIDE / 2;
-
 						std::thread th(&Terrain::loadMapFromDiscAsync, this, level, i * MEM_TILE_ONE_SIDE, currentTileIndex - offset, currentTileIndices[level].z - offset + i);
 						pool.push_back(std::move(th));
 					}
@@ -1247,44 +1310,33 @@ namespace Fury {
 
 
 					//
-					auto stop = high_resolution_clock::now();
-					auto duration = duration_cast<microseconds>(stop - start);
-					std::cout << "Time taken by disc load function: " << duration.count() << " microseconds" << std::endl;
+					//auto stop = high_resolution_clock::now();
+					//auto duration = duration_cast<microseconds>(stop - start);
+					//std::cout << "Time taken by disc load function: " << duration.count() << " microseconds" << std::endl;
 
-					start = high_resolution_clock::now();
+					//start = high_resolution_clock::now();
 
 					Terrain::loadLowDetailMipStackAtLevel(level);
 
-					stop = high_resolution_clock::now();
-					duration = duration_cast<microseconds>(stop - start);
-					std::cout << "Time taken by mipstack load function: " << duration.count() << " microseconds" << std::endl;
+					//stop = high_resolution_clock::now();
+					//duration = duration_cast<microseconds>(stop - start);
+					//std::cout << "Time taken by mipstack load function: " << duration.count() << " microseconds" << std::endl;
 
 
-					start = high_resolution_clock::now();
+					//start = high_resolution_clock::now();
 
 					unsigned char* heightData = NULL;
 					Terrain::loadTerrainChunkOnGraphicsMemoryVertical(level, heightData, -1);
 					Terrain::updateHeightMapTextureArrayPartialVertical(level, heightData);
 					delete[] heightData;
 
-					stop = high_resolution_clock::now();
-					duration = duration_cast<microseconds>(stop - start);
-					std::cout << "Time taken by gpu load function: " << duration.count() << " microseconds" << std::endl;
+					//stop = high_resolution_clock::now();
+					//duration = duration_cast<microseconds>(stop - start);
+					//std::cout << "Time taken by gpu load function: " << duration.count() << " microseconds" << std::endl;
 				}
 
 				currentTileIndices[level].x = currentTileIndex;
-				std::cout << currentTileIndex - 2 << " " << currentTileIndex - 1 << " " << currentTileIndex << " " << currentTileIndex + 1 << std::endl;
-				//
-				//auto start = high_resolution_clock::now();
-
-				//unsigned char* heightData = NULL;
-				//Terrain::updateHeightDataOnGraphicsMemory(level, heightData);
-				//Terrain::updateHeightMapTextureArray(level, heightData);
-				//delete[] heightData;
-				////
-				//auto stop = high_resolution_clock::now();
-				//auto duration = duration_cast<microseconds>(stop - start);
-				//std::cout << "Time taken by graphics function: " << duration.count() << " microseconds" << std::endl;
+				//std::cout << currentTileIndex - 2 << " " << currentTileIndex - 1 << " " << currentTileIndex << " " << currentTileIndex + 1 << std::endl;
 
 			}
 			clipmapPositions[level].x = x;
@@ -1299,17 +1351,6 @@ namespace Fury {
 				aabb.end = endInWorldSpace;
 				blockAABBs[level * 12 + j] = aabb;
 			}
-
-			//for (int j = 0; j < 4; j++) {
-
-			//	glm::vec4 startInWorldSpace;
-			//	glm::vec4 endInWorldSpace;
-			//	Terrain::getTerrainChunkBoundaries(ringFixUpPositions[level * 4 + j].x, ringFixUpPositions[level * 4 + j].y, level, startInWorldSpace, endInWorldSpace);
-			//	AABB_Box aabb;
-			//	aabb.start = startInWorldSpace;
-			//	aabb.end = endInWorldSpace;
-			//	ringfixupAABBs[level * 12 + j] = aabb;
-			//}
 		}
 	}
 
@@ -1344,10 +1385,89 @@ namespace Fury {
 
 		if (clipmapPositions[level].z != z) {
 
+			int parcelSizeInReal = TILE_SIZE * (1 << level);
+			int currentTileIndex = z / parcelSizeInReal;
 
+			if (currentTileIndices[level].z != currentTileIndex) {
 
+				int offset = currentTileIndex - currentTileIndices[level].z;
 
+				if (offset == 1) {
+
+					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++)
+						delete[] tiles[level][i];
+
+					for (int i = 0; i < MEM_TILE_ONE_SIDE - 1; i++)
+						for (int j = 0; j < MEM_TILE_ONE_SIDE; j++)
+							tiles[level][i * MEM_TILE_ONE_SIDE + j] = tiles[level][(i + 1) * MEM_TILE_ONE_SIDE + j];
+
+					std::vector<std::thread> pool;
+
+					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++) {
+						int offset = MEM_TILE_ONE_SIDE / 2;
+						std::thread th(&Terrain::loadMapFromDiscAsync, this, level, (MEM_TILE_ONE_SIDE - 1) * MEM_TILE_ONE_SIDE + i, currentTileIndices[level].x - offset + i, currentTileIndex + offset - 1);
+						pool.push_back(std::move(th));
+					}
+
+					for (auto& it : pool)
+						if (it.joinable())
+							it.join();
+
+					Terrain::loadLowDetailMipStackAtLevel(level);
+
+					unsigned char* heightData = NULL;
+					Terrain::loadTerrainChunkOnGraphicsMemoryHorizontal(level, heightData, 1);
+					Terrain::updateHeightMapTextureArrayPartialHorizontal(level, heightData);
+					delete[] heightData;
+
+					toroidalUpdateIndices[level].z++;
+					toroidalUpdateIndices[level].z = (toroidalUpdateIndices[level].z + (MEM_TILE_ONE_SIDE - 2)) % (MEM_TILE_ONE_SIDE - 2);
+				}
+				else if (offset == -1) {
+
+					toroidalUpdateIndices[level].z--;
+					toroidalUpdateIndices[level].z = (toroidalUpdateIndices[level].z + (MEM_TILE_ONE_SIDE - 2)) % (MEM_TILE_ONE_SIDE - 2);
+
+					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++)
+						delete[] tiles[level][(MEM_TILE_ONE_SIDE - 1) * MEM_TILE_ONE_SIDE + i];
+
+					for (int i = MEM_TILE_ONE_SIDE - 1; i >= 0; i--)
+						for (int j = 0; j < MEM_TILE_ONE_SIDE; j++)
+							tiles[level][i * MEM_TILE_ONE_SIDE + j] = tiles[level][(i - 1) * MEM_TILE_ONE_SIDE + j];
+
+					std::vector<std::thread> pool;
+					for (int i = 0; i < MEM_TILE_ONE_SIDE; i++) {
+						int offset = MEM_TILE_ONE_SIDE / 2;
+						std::thread th(&Terrain::loadMapFromDiscAsync, this, level, i, currentTileIndices[level].x - offset + i, currentTileIndex - offset);
+						pool.push_back(std::move(th));
+					}
+
+					for (auto& it : pool)
+						if (it.joinable())
+							it.join();
+
+					Terrain::loadLowDetailMipStackAtLevel(level);
+
+					unsigned char* heightData = NULL;
+					Terrain::loadTerrainChunkOnGraphicsMemoryHorizontal(level, heightData, -1);
+					Terrain::updateHeightMapTextureArrayPartialHorizontal(level, heightData);
+					delete[] heightData;
+				}
+
+				currentTileIndices[level].z = currentTileIndex;
+			}
 			clipmapPositions[level].z = z;
+
+			for (int j = 0; j < 12; j++) {
+
+				glm::vec4 startInWorldSpace;
+				glm::vec4 endInWorldSpace;
+				Terrain::getTerrainChunkBoundaries(blockPositions[level * 12 + j].x, blockPositions[level * 12 + j].y, level, startInWorldSpace, endInWorldSpace);
+				AABB_Box aabb;
+				aabb.start = startInWorldSpace;
+				aabb.end = endInWorldSpace;
+				blockAABBs[level * 12 + j] = aabb;
+			}
 		}
 	}
 

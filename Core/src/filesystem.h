@@ -1,6 +1,7 @@
 #pragma once
 
 #include "material/pbrmaterial.h"
+#include "material/globalvolume.h"
 
 namespace Fury {
 
@@ -88,6 +89,7 @@ namespace Fury {
 		ShaderFile* pbrShader;
 		//MaterialFile* pbrMaterialNoTexture;
 		PBRMaterial* pbrMaterial;
+		GlobalVolume* globalVolume;
 		//MaterialFile* pbrMat;
 		SceneFile* currentSceneFile;
 

@@ -16,10 +16,6 @@ uniform samplerCube irradianceMap;
 uniform samplerCube prefilterMap;
 uniform sampler2D brdfLUT;
 
-// lights
-uniform vec3 lightPositions[4];
-uniform vec3 lightColors[4];
-
 uniform vec3 camPos;
 
 const float PI = 3.14159265359;
@@ -96,7 +92,7 @@ void main()
     float metallic = texture(texture2, TexCoords).r;
     //metallic += (1 - metallic) * 0.75f;
     float roughness = texture(texture3, TexCoords).r;
-    //roughness = 1 - roughness;
+    roughness = 1 - roughness;
     float ao = texture(texture4, TexCoords).r;
        
     // input lighting data
