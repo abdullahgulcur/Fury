@@ -2,45 +2,40 @@
 #include "component/component.h"
 #include "glewcontext.h"
 #include "glm/glm.hpp"
-#include "perlin/PerlinNoise.hpp"
 
 #define RESOLUTION 16384
 #define TILE_SIZE 256
-#define MEM_TILE_ONE_SIDE 6
+#define MEM_TILE_ONE_SIDE 4
 
 namespace Fury {
+
+	/// <summary>
+	///  TODO:
+	///  View frustum culling
+	///  faster file read for heightmaps
+	///  merge functions in single func
+	///  less data
+	///  code review
+	/// </summary>
 
 	class Core;
 
 	struct TerrainVertexAttribs {
 
-		glm::vec2 texturePos;
 		glm::vec2 position;
-		float scale;
-		float texSize;
 		float level;
 		glm::mat4 model;
-	};
-
-	struct Vec2Int {
-		int x;
-		int z;
-		Vec2Int(int _x, int _z) {
-			x = _x; z = _z;
-		}
 	};
 
 	class  __declspec(dllexport) Terrain : public Component {
 
 	private:
 
-		/* FOR TEXTURE STREAMING */
-
-		// Each parcel is loaded according to camera's position.
-		// There is a hieararchical loading mechanism, SSD -> RAM -> GPU.
+		glm::vec3 cameraPosition;
 
 	public:
 
+		// is this part necessary ??
 		glm::vec2* blockPositions;
 		glm::vec2* ringFixUpPositions;
 		glm::vec2* interiorTrimPositions;
@@ -53,21 +48,10 @@ namespace Fury {
 
 		unsigned short clipmapResolution = 16;
 		//unsigned short clipmapLevel = 4;
-		float triangleSize = 1.f;
+		//float triangleSize = 1.f;
 
 		unsigned int programID;
 		unsigned int elevationMapTexture;
-		unsigned int normalMapTexture;
-
-		unsigned int diffuse;
-		unsigned int normal;
-		unsigned int metalness;
-		unsigned int roughness;
-		unsigned int ao;
-		unsigned int displacement;
-
-		std::vector<unsigned int> elevationMapTextures;
-		std::vector<unsigned int> normalMapTextures;
 
 		std::vector<unsigned int> blockIndices;
 		unsigned int blockVAO;
@@ -84,82 +68,26 @@ namespace Fury {
 		std::vector<unsigned int> interiorTrimIndices;
 		unsigned int interiorTrimVAO;
 
-		//unsigned int instanceBuffer;
-
-		unsigned int perlinSeed = 48932;
-		unsigned char perlinOctaves = 4;
-		float perlinScale = 0.003f;
-		float heightScale = 50.f;
-		float perlinPersistence = 0.5f;
-
-		/* about texture streaming */
-		std::vector<Vec2Int> clipmapPositions;
-		std::vector<Vec2Int> currentTileIndices;
-		std::vector<Vec2Int> toroidalUpdateIndices;
-		std::vector<Vec2Int> initialTexturePositions;
-
-		
-
-		unsigned char*** tiles; // 0: level, 1: tile, 2: byte
-		//std::vector<std::string> heightmapNameList;
-
 		unsigned char** lowDetailMipStack;
 		
 		Terrain();
 		~Terrain();
 		void init();
 		void update();
-		void calculateTerrainChunkPositions();
-		void createHeightMap(std::vector<float>& heightImage);
-		void createHeightMapWithPerlinNoise(std::vector<float>& heightImage);
-		void createNormalMap(std::vector<char>& normalImage);
 		void generateTerrainClipmapsVertexArrays();
-		//float** getFlatHeightmap();
-		char* getNormalMap(int size);
-		void getMaxAndMinHeights(glm::vec2& bounds, const int& level, const glm::vec3& start, const glm::vec3& end);
-		void setBoundariesOfClipmap(const int& level, glm::vec3& start, glm::vec3& end);
-		void recalculateNormals(std::vector<float>& heightImage, std::vector<char>& normalImage);
-		void streamFromTexture(int level, int oldCamPosX, int oldCamPosZ, int newCamPosX, int newCamPosZ);
-		void updateStreamFrom_X(int level, int newCamPosX);
-		void createDummyHeightmapTextureSet(int tileSize, int numTiles);
-		void createHeightmap(const siv::PerlinNoise& perlin, int tileSize, int ind_x, int ind_z);
-		void changeCurrentTileIndex_X(int level, int currentIndex);
-		void loadAllHeightmapNames();
-		Vec2Int getClipmapPosition(int level, glm::vec3& camPos);
-		void loadAllHeightmaps();
-		unsigned char* loadHeightmapFromDisk(int level, int x, int z);
-		void sendHeightDataToGraphicsMemory(int level, unsigned char**& heightData);
-		void updateHeightDataOnGraphicsMemory(int level, unsigned char*& heightData);
-		void writeHeightDataToGPUBuffer(int level, unsigned char*& buffer, int x, int z);
-		void writeHeightDataToMipStack(int level, unsigned char*& buffer, int x, int z, int divisionMultiplier);
-		void createHeightMapTexture(unsigned char* heights);
-		void createHeightMapTextureArray(unsigned char** heights);
-		void recreateHeightMapTextureArray(unsigned char** heights);
-		void recreateHeightMapTexture(unsigned char* heights);
-		void setClipmapPositionHorizontal(int level, int x);
-		void setClipmapPositionVertical(int level, int z);
-		void applyPerlinNoiseOnPart(const siv::PerlinNoise& perlin, unsigned char* heights, int tileSize, int baseTileSize, int ind_x, int ind_z);
-		void createDummyHeightmapTexture(int tileSize, int resolution);
-		void createMipmapFromBase(unsigned char* baseTexture, unsigned char* newTexture, int baseSize);
-		void createHeightmapImageFile(unsigned char* heights, int level, int newTileSize, int baseTileSize, int ind_x, int ind_z);
-		void fucker(unsigned char* baseTexture, int baseSize);
+		void loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel);
+		void loadHeightmapAtLevel(int level, glm::vec3 camPos, unsigned char* heightData);
+		void streamTerrain(glm::vec3 newCamPos, int clipmapLevel);
+		void streamTerrainHorizontal(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level);
+		void streamTerrainVertical(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level);
+		void loadFromDiscAndWriteGPUBufferAsync(int level, int texWidth, glm::ivec2 tileStart, glm::ivec2 border, unsigned char* heightData);
+		void updateHeightMapTextureArrayPartial(int level, glm::ivec2 size, glm::ivec2 position, unsigned char* heights);
+		void deleteHeightmapArray(unsigned char** heightmapArray);
+		void createHeightMapTextureArray(unsigned char** heightmapArray);
+		void writeHeightDataToGPUBuffer(glm::ivec2 index, int texWidth, unsigned char* heightMap, unsigned char* chunk);
+		unsigned char* loadTerrainChunkFromDisc(int level, glm::ivec2 index);
+		glm::ivec2 getClipmapPosition(int level, glm::vec3& camPos);
+		glm::ivec2 getTileIndex(int level, glm::vec3& camPos);
 		int getMaxMipLevel(int textureSize, int tileSize);
-		void initTilesPtr();
-		void deleteAllHeightData(unsigned char** heights);
-		void deleteAllTiles();
-		void loadMapFromDiscAsync(int level, int tileIndex, int x, int z);
-		void updateHeightMapTextureArray(int level, unsigned char* heights);
-		void updateHeightMapTextureArrayPartialVertical(int level, unsigned char* heights);
-		void updateHeightMapTextureArrayPartialHorizontal(int level, unsigned char* heights);
-		void loadTerrainChunkOnGraphicsMemoryVertical(int lodLevel, unsigned char*& heightData, int dir);
-		void loadTerrainChunkOnGraphicsMemoryHorizontal(int lodLevel, unsigned char*& heightData, int dir);
-		void writeHeightDataToGPUBufferVertical(int level, unsigned char* buffer, int z, int x);
-		void writeHeightDataToGPUBufferHorizontal(int level, unsigned char* buffer, int z, int x);
-		void loadAllLowDetailMipStack(int lodLevel);
-		void deleteAllLowDetailMipStack();
-		void deleteLowDetailMipStack(int lodLevel);
-		void loadLowDetailMipStackAtLevel(int lodLevel);
-		void getTerrainChunkBoundaries(int blockPosX, int blockPosZ, int level, glm::vec4& startInWorldSpace, glm::vec4& endInWorldSpace);
-		glm::vec2 getMinAndMaxPointOfTerrainChunk(int startX, int startZ, int endX, int endZ, int level);
 	};
 }

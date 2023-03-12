@@ -29,7 +29,7 @@ namespace Editor {
 
 		float rotationSpeed = 0.02;
 		float translationSpeed = 1000;
-		float scrollSpeed = 50;
+		float scrollSpeed = 500;
 		float generalSpeed = 0.3f;
 
 		UINT16 controlFlags;

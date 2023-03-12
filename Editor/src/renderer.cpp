@@ -11,7 +11,7 @@
 
 #define RESOLUTION 16384
 #define TILE_SIZE 256
-#define MEM_TILE_ONE_SIDE 6
+#define MEM_TILE_ONE_SIDE 4
 
 using namespace std::chrono;
 
@@ -455,8 +455,10 @@ namespace Editor {
 		glew->useProgram(programID);
 		glew->uniformMatrix4fv(glew->getUniformLocation(programID, "PV"), 1, 0, pvAddr);
 		glew->uniform3fv(glew->getUniformLocation(programID, "camPos"), 1, &camera->position[0]);
-		glew->uniform1f(glew->getUniformLocation(programID, "heightScale"), 0.1f);
-		glew->uniform1f(glew->getUniformLocation(programID, "mapSize"), mapSize);
+		glew->uniform1f(glew->getUniformLocation(programID, "texSize"), (float)TILE_SIZE * MEM_TILE_ONE_SIDE);
+
+		//glew->uniform1f(glew->getUniformLocation(programID, "heightScale"), 0.1f);
+		//glew->uniform1f(glew->getUniformLocation(programID, "mapSize"), mapSize);
 		//glew->uniform3fv(glew->getUniformLocation(programID, "lightDir"), 1, lightDirAddr);
 
 		// bind pre-computed IBL data
@@ -466,19 +468,8 @@ namespace Editor {
 		glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->prefilterMap);
 		glew->activeTexture(GL_TEXTURE2);
 		glew->bindTexture(GL_TEXTURE_2D, globalVolume->brdfLUTTexture);
+
 		glew->activeTexture(GL_TEXTURE3);
-		glew->bindTexture(GL_TEXTURE_2D, terrain->diffuse);
-		glew->activeTexture(GL_TEXTURE4);
-		glew->bindTexture(GL_TEXTURE_2D, terrain->normal);
-		glew->activeTexture(GL_TEXTURE5);
-		glew->bindTexture(GL_TEXTURE_2D, terrain->metalness);
-		glew->activeTexture(GL_TEXTURE6);
-		glew->bindTexture(GL_TEXTURE_2D, terrain->roughness);
-		glew->activeTexture(GL_TEXTURE7);
-		glew->bindTexture(GL_TEXTURE_2D, terrain->ao);
-		glew->activeTexture(GL_TEXTURE8);
-		glew->bindTexture(GL_TEXTURE_2D, terrain->displacement);
-		glew->activeTexture(GL_TEXTURE9);
 		glew->bindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTexture);
 
 		// It has to be two. 
@@ -516,20 +507,16 @@ namespace Editor {
 				AABB_Box aabb = terrain->blockAABBs[i * 12 + j];
 				startInWorldSpace = aabb.start;
 				endInWorldSpace = aabb.end;
-				if (gc->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+			//	if (gc->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
 
 					TerrainVertexAttribs attribs;
 					attribs.level = i;
 					attribs.model = glm::mat4(1);
 					attribs.position = glm::vec2(blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y);
-					attribs.scale = (1 << i);
-					attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2) * (1 << i);
-					attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[i].x, (float)terrain->initialTexturePositions[i].z);
 					instanceArray.push_back(attribs);
-				}
+			//	}
 			}
 		}
-
 
 		for (int i = 0; i < 4; i++) {
 
@@ -537,9 +524,6 @@ namespace Editor {
 			attribs.level = 0;
 			attribs.model = glm::mat4(1);
 			attribs.position = glm::vec2(blockPositions[level * 12 + i].x, blockPositions[level * 12 + i].y);
-			attribs.scale = 1;
-			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2);
-			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[0].x, (float)terrain->initialTexturePositions[0].z);
 			instanceArray.push_back(attribs);
 		}
 
@@ -554,30 +538,22 @@ namespace Editor {
 		glew->enableVertexAttribArray(1);
 		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
 		glew->enableVertexAttribArray(2);
-		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->vertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
 		glew->enableVertexAttribArray(3);
-		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->vertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float)));
 		glew->enableVertexAttribArray(4);
-		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->vertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4)));
 		glew->enableVertexAttribArray(5);
-		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->vertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 2));
 		glew->enableVertexAttribArray(6);
-		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
-		glew->enableVertexAttribArray(7);																			
-		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
-		glew->enableVertexAttribArray(8);																			
-		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
-		glew->enableVertexAttribArray(9);																			
-		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 3));
+
 		glew->vertexAttribDivisor(1, 1);
 		glew->vertexAttribDivisor(2, 1);
 		glew->vertexAttribDivisor(3, 1);
 		glew->vertexAttribDivisor(4, 1);
 		glew->vertexAttribDivisor(5, 1);
 		glew->vertexAttribDivisor(6, 1);
-		glew->vertexAttribDivisor(7, 1);
-		glew->vertexAttribDivisor(8, 1);
-		glew->vertexAttribDivisor(9, 1);
 
 		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(blockIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
 
@@ -594,10 +570,6 @@ namespace Editor {
 			TerrainVertexAttribs attribs;
 			attribs.level = i;
 			attribs.model = model;
-			
-			attribs.scale = (1 << i);
-			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2) * (1 << i);
-			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[i].x, (float)terrain->initialTexturePositions[i].z);
 
 			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 0].x, ringFixUpPositions[i * 4 + 0].y);
 			instanceArray.push_back(attribs);
@@ -617,10 +589,7 @@ namespace Editor {
 			TerrainVertexAttribs attribs;
 			attribs.level = 0;
 			attribs.model = glm::mat4(1);
-			attribs.scale = 1;
-			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2);
-			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[0].x, (float)terrain->initialTexturePositions[0].z);
-
+		
 			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 0].x, ringFixUpPositions[level * 4 + 0].y);
 			instanceArray.push_back(attribs);
 			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 2].x, ringFixUpPositions[level * 4 + 2].y);
@@ -641,33 +610,26 @@ namespace Editor {
 
 		glew->bindVertexArray(ringFixUpVAO);
 		glew->bindBuffer(0x8892, instanceBuffer);
+
 		glew->enableVertexAttribArray(1);
 		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
 		glew->enableVertexAttribArray(2);
-		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->vertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
 		glew->enableVertexAttribArray(3);
-		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->vertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float)));
 		glew->enableVertexAttribArray(4);
-		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->vertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4)));
 		glew->enableVertexAttribArray(5);
-		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->vertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 2));
 		glew->enableVertexAttribArray(6);
-		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
-		glew->enableVertexAttribArray(7);
-		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
-		glew->enableVertexAttribArray(8);
-		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
-		glew->enableVertexAttribArray(9);
-		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 3));
+
 		glew->vertexAttribDivisor(1, 1);
 		glew->vertexAttribDivisor(2, 1);
 		glew->vertexAttribDivisor(3, 1);
 		glew->vertexAttribDivisor(4, 1);
 		glew->vertexAttribDivisor(5, 1);
 		glew->vertexAttribDivisor(6, 1);
-		glew->vertexAttribDivisor(7, 1);
-		glew->vertexAttribDivisor(8, 1);
-		glew->vertexAttribDivisor(9, 1);
 
 		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(ringFixUpIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
 
@@ -677,16 +639,13 @@ namespace Editor {
 
 		// INTERIOR TRIM
 
-		for (int i = 0; i < level; i++) {
+		for (int i = 0; i < level - 1; i++) {
 
 			glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(rotAmounts[i]), glm::vec3(0.0f, 1.0f, 0.0f));
 
 			TerrainVertexAttribs attribs;
-			attribs.level = i;
+			attribs.level = i + 1;
 			attribs.model = model;
-			attribs.scale = (2 << i);
-			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2) * (1 << i);
-			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[i].x, (float)terrain->initialTexturePositions[i].z);
 			attribs.position = glm::vec2(interiorTrimPositions[i].x, interiorTrimPositions[i].y);
 			instanceArray.push_back(attribs);
 		}
@@ -696,34 +655,26 @@ namespace Editor {
 		glew->bufferData(0x8892, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], 0x88E4);
 
 		glew->bindVertexArray(interiorTrimVAO);
-		glew->bindBuffer(0x8892, instanceBuffer);
+
 		glew->enableVertexAttribArray(1);
 		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
 		glew->enableVertexAttribArray(2);
-		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->vertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
 		glew->enableVertexAttribArray(3);
-		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->vertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float)));
 		glew->enableVertexAttribArray(4);
-		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->vertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4)));
 		glew->enableVertexAttribArray(5);
-		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->vertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 2));
 		glew->enableVertexAttribArray(6);
-		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
-		glew->enableVertexAttribArray(7);
-		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
-		glew->enableVertexAttribArray(8);
-		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
-		glew->enableVertexAttribArray(9);
-		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 3));
+
 		glew->vertexAttribDivisor(1, 1);
 		glew->vertexAttribDivisor(2, 1);
 		glew->vertexAttribDivisor(3, 1);
 		glew->vertexAttribDivisor(4, 1);
 		glew->vertexAttribDivisor(5, 1);
 		glew->vertexAttribDivisor(6, 1);
-		glew->vertexAttribDivisor(7, 1);
-		glew->vertexAttribDivisor(8, 1);
-		glew->vertexAttribDivisor(9, 1);
 
 		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(interiorTrimIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
 
@@ -740,9 +691,6 @@ namespace Editor {
 			TerrainVertexAttribs attribs;
 			attribs.level = i;
 			attribs.model = model;
-			attribs.scale = (1 << i);
-			attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2) * (1 << i);
-			attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[i].x, (float)terrain->initialTexturePositions[i].z);
 
 			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 0].x, outerDegeneratePositions[i * 4 + 0].y);
 			instanceArray.push_back(attribs);
@@ -750,6 +698,7 @@ namespace Editor {
 			instanceArray.push_back(attribs);
 
 			model = glm::rotate(glm::mat4(1), glm::radians(-90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+			attribs.model = model;
 
 			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 2].x, outerDegeneratePositions[i * 4 + 2].y);
 			instanceArray.push_back(attribs);
@@ -763,33 +712,26 @@ namespace Editor {
 
 		glew->bindVertexArray(outerDegenerateVAO);
 		glew->bindBuffer(0x8892, instanceBuffer);
+		
 		glew->enableVertexAttribArray(1);
 		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
 		glew->enableVertexAttribArray(2);
-		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->vertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
 		glew->enableVertexAttribArray(3);
-		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->vertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float)));
 		glew->enableVertexAttribArray(4);
-		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->vertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4)));
 		glew->enableVertexAttribArray(5);
-		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->vertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 2));
 		glew->enableVertexAttribArray(6);
-		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
-		glew->enableVertexAttribArray(7);
-		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
-		glew->enableVertexAttribArray(8);
-		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
-		glew->enableVertexAttribArray(9);
-		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 3));
+
 		glew->vertexAttribDivisor(1, 1);
 		glew->vertexAttribDivisor(2, 1);
 		glew->vertexAttribDivisor(3, 1);
 		glew->vertexAttribDivisor(4, 1);
 		glew->vertexAttribDivisor(5, 1);
 		glew->vertexAttribDivisor(6, 1);
-		glew->vertexAttribDivisor(7, 1);
-		glew->vertexAttribDivisor(8, 1);
-		glew->vertexAttribDivisor(9, 1);
 
 		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(outerDegenerateIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
 
@@ -802,9 +744,6 @@ namespace Editor {
 		TerrainVertexAttribs attribs;
 		attribs.level = 0;
 		attribs.model = glm::mat4(1);
-		attribs.scale = 1;
-		attribs.texSize = TILE_SIZE * (MEM_TILE_ONE_SIDE - 2);
-		attribs.texturePos = glm::vec2((float)terrain->initialTexturePositions[0].x, (float)terrain->initialTexturePositions[0].z);
 
 		attribs.position = glm::vec2(smallSquarePosition.x, smallSquarePosition.y);
 		instanceArray.push_back(attribs);
@@ -814,33 +753,26 @@ namespace Editor {
 		glew->bufferData(0x8892, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], 0x88E4);
 
 		glew->bindVertexArray(smallSquareVAO);
+		
 		glew->enableVertexAttribArray(1);
 		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
 		glew->enableVertexAttribArray(2);
-		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->vertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
 		glew->enableVertexAttribArray(3);
-		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
+		glew->vertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float)));
 		glew->enableVertexAttribArray(4);
-		glew->vertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float)));
+		glew->vertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4)));
 		glew->enableVertexAttribArray(5);
-		glew->vertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 2));
+		glew->vertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 2));
 		glew->enableVertexAttribArray(6);
-		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3));
-		glew->enableVertexAttribArray(7);
-		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4)));
-		glew->enableVertexAttribArray(8);
-		glew->vertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 2));
-		glew->enableVertexAttribArray(9);
-		glew->vertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, size, (void*)((sizeof(glm::vec2) * 2) + sizeof(float) * 3 + sizeof(glm::vec4) * 3));
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 3));
+
 		glew->vertexAttribDivisor(1, 1);
 		glew->vertexAttribDivisor(2, 1);
 		glew->vertexAttribDivisor(3, 1);
 		glew->vertexAttribDivisor(4, 1);
 		glew->vertexAttribDivisor(5, 1);
 		glew->vertexAttribDivisor(6, 1);
-		glew->vertexAttribDivisor(7, 1);
-		glew->vertexAttribDivisor(8, 1);
-		glew->vertexAttribDivisor(9, 1);
 
 		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(smallSquareIndiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
 

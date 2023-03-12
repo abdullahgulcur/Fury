@@ -347,7 +347,7 @@ namespace Fury {
 			return false;
 
 		Terrain* terrainComp = ent->addComponent<Terrain>();
-		terrainComp->clipmapResolution = 120;// atoi(cameraNode->first_attribute("ClipmapResolution")->value());
+		terrainComp->clipmapResolution = 60;// atoi(cameraNode->first_attribute("ClipmapResolution")->value());
 		//terrainComp->clipmapLevel = 4;// atoi(cameraNode->first_attribute("ClipmapLevel")->value());
 		//terrainComp->triangleSize = atof(cameraNode->first_attribute("TriangleSize")->value());
 		terrainComp->init();

@@ -929,7 +929,7 @@ namespace Editor {
 
 		ImGui::Button("Create", ImVec2(60, 20));
 
-		static int foldersPanelLeftPartWidth = 260;
+		int foldersPanelLeftPartWidth = 200;
 		ImGui::SameLine(foldersPanelLeftPartWidth + 23);
 
 		Menu::showCurrentDirectoryText();
@@ -1028,24 +1028,24 @@ namespace Editor {
 
 		ImGui::SameLine();
 
-		ImGui::Button(" ", ImVec2(3, ImGui::GetWindowSize().y - 53));
-		if (ImGui::IsItemClicked())
-			folderLineClicked = true;
-		if (size.x > 400) {
-			if (folderLineClicked) {
-				if (foldersPanelLeftPartWidth > 200)
-					foldersPanelLeftPartWidth += mouseDeltaX / 2;
-				else
-					foldersPanelLeftPartWidth = 200;
+		//ImGui::Button(" ", ImVec2(3, ImGui::GetWindowSize().y - 53));
+		//if (ImGui::IsItemClicked())
+		//	folderLineClicked = true;
+		//if (size.x > 400) {
+		//	if (folderLineClicked) {
+		//		if (foldersPanelLeftPartWidth > 200)
+		//			foldersPanelLeftPartWidth += mouseDeltaX / 2;
+		//		else
+		//			foldersPanelLeftPartWidth = 200;
 
-				if (size.x - foldersPanelLeftPartWidth >= 200)
-					foldersPanelLeftPartWidth += mouseDeltaX / 2;
-				else
-					foldersPanelLeftPartWidth = size.x - 200;
-			}
-		}
-		else
-			foldersPanelLeftPartWidth = size.x / 2;
+		//		if (size.x - foldersPanelLeftPartWidth >= 200)
+		//			foldersPanelLeftPartWidth += mouseDeltaX / 2;
+		//		else
+		//			foldersPanelLeftPartWidth = size.x - 200;
+		//	}
+		//}
+		//else
+		//	foldersPanelLeftPartWidth = size.x / 2;
 
 		ImGui::SameLine();
 		ImVec2 scrolling_child_size_r = ImVec2(size.x - scrolling_child_size.x - 26, ImGui::GetWindowSize().y - 54);
@@ -2194,7 +2194,7 @@ namespace Editor {
 
 		if (treeNodeOpen) {
 
-			ImGui::Image((ImTextureID)comp->elevationMapTexture, ImVec2(128, 128), uv0, uv1, tint_col, border_col);
+			//ImGui::Image((ImTextureID)comp->elevationMapTexture, ImVec2(128, 128), uv0, uv1, tint_col, border_col);
 
 			ImGui::TreePop();
 		}
