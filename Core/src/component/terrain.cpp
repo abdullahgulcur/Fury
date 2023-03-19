@@ -5,6 +5,7 @@
 #include "scenemanager.h"
 #include "scene.h"
 #include "glewcontext.h"
+#include "component/gamecamera.h"
 #include "lodepng/lodepng.h"
 #include "FreeImage.h"
 
@@ -138,6 +139,221 @@ namespace Fury {
 		
 		Terrain::calculateBlockPositions(camPosition, level);
 		Terrain::streamTerrain(camPosition, level);
+	}
+
+	void Terrain::onDraw(glm::mat4& pv, glm::vec3& pos) {
+
+		Scene* scene = Core::instance->sceneManager->currentScene;
+		GameCamera* camera = scene->primaryCamera;
+		GlewContext* glew = Core::instance->glewContext;
+
+		int level = Terrain::getMaxMipLevel(RESOLUTION, TILE_SIZE);
+		int programID = this->programID;
+
+		float* lightDirAddr = &glm::normalize(-glm::vec3(0.5, -1, 0.5))[0];
+
+		int elevationMapTexture = this->elevationMapTexture;
+
+		int blockVAO = this->blockVAO;
+		int ringFixUpVAO = this->ringFixUpVAO;
+		int smallSquareVAO = this->smallSquareVAO;
+		int interiorTrimVAO = this->interiorTrimVAO;
+		int outerDegenerateVAO = this->outerDegenerateVAO;
+
+		int blockIndiceCount = blockIndices.size();
+		int ringFixUpIndiceCount = ringFixUpIndices.size();
+		int smallSquareIndiceCount = smallSquareIndices.size();
+		int interiorTrimIndiceCount = interiorTrimIndices.size();
+		int outerDegenerateIndiceCount = outerDegenerateIndices.size();
+
+		GlobalVolume* globalVolume = Core::instance->fileSystem->globalVolume;
+
+		glew->useProgram(programID);
+		glew->uniformMatrix4fv(glew->getUniformLocation(programID, "PV"), 1, 0, &pv[0][0]);
+		glew->uniform3fv(glew->getUniformLocation(programID, "camPos"), 1, &pos[0]);
+		glew->uniform1f(glew->getUniformLocation(programID, "texSize"), (float)TILE_SIZE * MEM_TILE_ONE_SIDE);
+
+		// bind pre-computed IBL data
+		glew->activeTexture(GL_TEXTURE0);
+		glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->irradianceMap);
+		glew->activeTexture(GL_TEXTURE1);
+		glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->prefilterMap);
+		glew->activeTexture(GL_TEXTURE2);
+		glew->bindTexture(GL_TEXTURE_2D, globalVolume->brdfLUTTexture);
+
+		glew->activeTexture(GL_TEXTURE3);
+		glew->bindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTexture);
+
+		glm::vec2* blockPositions = this->blockPositions;
+		glm::vec2* ringFixUpPositions = this->ringFixUpPositions;
+		glm::vec2* interiorTrimPositions = this->interiorTrimPositions;
+		glm::vec2* outerDegeneratePositions = this->outerDegeneratePositions;
+		float* rotAmounts = this->rotAmounts;
+		glm::vec2 smallSquarePosition = this->smallSquarePosition;
+
+		std::vector<TerrainVertexAttribs> instanceArray;
+
+		// BLOCKS
+
+		for (int i = 0; i < level; i++) {
+
+			for (int j = 0; j < 12; j++) {
+
+				glm::vec4 startInWorldSpace;
+				glm::vec4 endInWorldSpace;
+				AABB_Box aabb = blockAABBs[i * 12 + j];
+				startInWorldSpace = aabb.start;
+				endInWorldSpace = aabb.end;
+				if (camera->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+
+					TerrainVertexAttribs attribs;
+					attribs.level = i;
+					attribs.model = glm::mat4(1);
+					attribs.position = glm::vec2(blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y);
+					instanceArray.push_back(attribs);
+				}
+			}
+		}
+
+		for (int i = 0; i < 4; i++) {
+
+			TerrainVertexAttribs attribs;
+			attribs.level = 0;
+			attribs.model = glm::mat4(1);
+			attribs.position = glm::vec2(blockPositions[level * 12 + i].x, blockPositions[level * 12 + i].y);
+			instanceArray.push_back(attribs);
+		}
+
+		int size = sizeof(TerrainVertexAttribs);
+		Terrain::drawElementsInstanced(glew, size, blockVAO, instanceArray, blockIndiceCount);
+		instanceArray.clear();
+
+		// RING FIXUP
+		for (int i = 0; i < level; i++) {
+
+			glm::mat4 model = glm::mat4(1);
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i;
+			attribs.model = model;
+
+			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 0].x, ringFixUpPositions[i * 4 + 0].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 2].x, ringFixUpPositions[i * 4 + 2].y);
+			instanceArray.push_back(attribs);
+
+			model = glm::rotate(glm::mat4(1), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+			attribs.model = model;
+
+			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 1].x, ringFixUpPositions[i * 4 + 1].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 3].x, ringFixUpPositions[i * 4 + 3].y);
+			instanceArray.push_back(attribs);
+		}
+
+		{
+			TerrainVertexAttribs attribs;
+			attribs.level = 0;
+			attribs.model = glm::mat4(1);
+
+			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 0].x, ringFixUpPositions[level * 4 + 0].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 2].x, ringFixUpPositions[level * 4 + 2].y);
+			instanceArray.push_back(attribs);
+
+			glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+			attribs.model = model;
+
+			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 1].x, ringFixUpPositions[level * 4 + 1].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 3].x, ringFixUpPositions[level * 4 + 3].y);
+			instanceArray.push_back(attribs);
+		}
+
+		Terrain::drawElementsInstanced(glew, size, ringFixUpVAO, instanceArray, ringFixUpIndiceCount);
+		instanceArray.clear();
+
+		// INTERIOR TRIM
+		for (int i = 0; i < level - 1; i++) {
+
+			glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(rotAmounts[i]), glm::vec3(0.0f, 1.0f, 0.0f));
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i + 1;
+			attribs.model = model;
+			attribs.position = glm::vec2(interiorTrimPositions[i].x, interiorTrimPositions[i].y);
+			instanceArray.push_back(attribs);
+		}
+		Terrain::drawElementsInstanced(glew, size, interiorTrimVAO, instanceArray, interiorTrimIndiceCount);
+		instanceArray.clear();
+
+		// OUTER DEGENERATE
+		for (int i = 0; i < level; i++) {
+
+			glm::mat4 model = glm::mat4(1);
+
+			TerrainVertexAttribs attribs;
+			attribs.level = i;
+			attribs.model = model;
+
+			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 0].x, outerDegeneratePositions[i * 4 + 0].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 1].x, outerDegeneratePositions[i * 4 + 1].y);
+			instanceArray.push_back(attribs);
+
+			model = glm::rotate(glm::mat4(1), glm::radians(-90.f), glm::vec3(0.0f, 1.0f, 0.0f));
+			attribs.model = model;
+
+			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 2].x, outerDegeneratePositions[i * 4 + 2].y);
+			instanceArray.push_back(attribs);
+			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 3].x, outerDegeneratePositions[i * 4 + 3].y);
+			instanceArray.push_back(attribs);
+		}
+		Terrain::drawElementsInstanced(glew, size, outerDegenerateVAO, instanceArray, outerDegenerateIndiceCount);
+		instanceArray.clear();
+
+		// SMALL SQUARE
+		TerrainVertexAttribs attribs;
+		attribs.level = 0;
+		attribs.model = glm::mat4(1);
+		attribs.position = glm::vec2(smallSquarePosition.x, smallSquarePosition.y);
+		instanceArray.push_back(attribs);
+		Terrain::drawElementsInstanced(glew, size, smallSquareVAO, instanceArray, smallSquareIndiceCount);
+	}
+
+	void Terrain::drawElementsInstanced(GlewContext* glew, int size, unsigned int VAO, std::vector<TerrainVertexAttribs>& instanceArray, unsigned int indiceCount) {
+
+		unsigned int instanceBuffer;
+		glew->genBuffers(1, &instanceBuffer);
+		glew->bindBuffer(0x8892, instanceBuffer);
+		glew->bufferData(0x8892, instanceArray.size() * sizeof(TerrainVertexAttribs), &instanceArray[0], 0x88E4);
+
+		glew->bindVertexArray(VAO);
+
+		glew->enableVertexAttribArray(1);
+		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
+		glew->enableVertexAttribArray(2);
+		glew->vertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->enableVertexAttribArray(3);
+		glew->vertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float)));
+		glew->enableVertexAttribArray(4);
+		glew->vertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4)));
+		glew->enableVertexAttribArray(5);
+		glew->vertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 2));
+		glew->enableVertexAttribArray(6);
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 3));
+
+		glew->vertexAttribDivisor(1, 1);
+		glew->vertexAttribDivisor(2, 1);
+		glew->vertexAttribDivisor(3, 1);
+		glew->vertexAttribDivisor(4, 1);
+		glew->vertexAttribDivisor(5, 1);
+		glew->vertexAttribDivisor(6, 1);
+
+		glew->drawElementsInstanced(GL_TRIANGLES, static_cast<unsigned int>(indiceCount), GL_UNSIGNED_INT, 0, instanceArray.size());
+
+		glew->bindVertexArray(0);
+		glew->deleteBuffers(1, &instanceBuffer);
 	}
 
 	void Terrain::calculateBlockPositions(glm::vec3 camPosition, int level) {
@@ -417,7 +633,6 @@ namespace Fury {
 				unsigned char* heightData = new unsigned char[MEM_TILE_ONE_SIDE * MEM_TILE_ONE_SIDE * TILE_SIZE * TILE_SIZE * 2];
 				Terrain::loadHeightmapAtLevel(level, newCamPos, heightData);
 				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(0, 0), heightData);
-			//	Terrain::updateHeightsWithTerrainChunk(heights[level], heightData, glm::ivec2(0, 0), glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE * MEM_TILE_ONE_SIDE));
 				delete[] heightData;
 				continue;
 			}
@@ -460,7 +675,6 @@ namespace Fury {
 						it.join();
 
 				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(old_border.x * TILE_SIZE, 0), heightData);
-			//	Terrain::updateHeightsWithTerrainChunk(heights[level], heightData, glm::ivec2(old_border.x * TILE_SIZE, 0), glm::ivec2(TILE_SIZE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE * MEM_TILE_ONE_SIDE));
 
 				old_border.x++;
 				old_border.x %= MEM_TILE_ONE_SIDE;
@@ -498,7 +712,6 @@ namespace Fury {
 						it.join();
 
 				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(old_border.x * TILE_SIZE, 0), heightData);
-				//Terrain::updateHeightsWithTerrainChunk(heights[level], heightData, glm::ivec2(old_border.x * TILE_SIZE, 0), glm::ivec2(TILE_SIZE, TILE_SIZE * MEM_TILE_ONE_SIDE), glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE * MEM_TILE_ONE_SIDE));
 
 				old_tileStart.x--;
 			}
@@ -534,7 +747,6 @@ namespace Fury {
 						it.join();
 
 				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE), glm::ivec2(0, old_border.y * TILE_SIZE), heightData);
-			//	Terrain::updateHeightsWithTerrainChunk(heights[level], heightData, glm::ivec2(0, old_border.y * TILE_SIZE), glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE), glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE * MEM_TILE_ONE_SIDE));
 
 				old_border.y++;
 				old_border.y %= MEM_TILE_ONE_SIDE;
@@ -572,8 +784,7 @@ namespace Fury {
 						it.join();
 
 				Terrain::updateHeightMapTextureArrayPartial(level, glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE), glm::ivec2(0, old_border.y * TILE_SIZE), heightData);
-			//	Terrain::updateHeightsWithTerrainChunk(heights[level], heightData, glm::ivec2(0, old_border.y * TILE_SIZE), glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE), glm::ivec2(TILE_SIZE * MEM_TILE_ONE_SIDE, TILE_SIZE * MEM_TILE_ONE_SIDE));
-
+			
 				old_tileStart.y--;
 			}
 
@@ -581,7 +792,6 @@ namespace Fury {
 		}
 	}
 
-	// mip stack ve height degerlerine de burda yukle
 	void Terrain::loadFromDiscAndWriteGPUBufferAsync(int level, int texWidth, glm::ivec2 tileStart, glm::ivec2 border, unsigned char* heightData, glm::ivec2 toroidalUpdateBorder) {
 
 		unsigned char* chunkHeightData = loadTerrainChunkFromDisc(level, tileStart);
@@ -936,7 +1146,7 @@ namespace Fury {
 			lodLevel++;
 		}
 		//return lodLevel;
-		return 3;
+		return 4;
 	}
 
 }

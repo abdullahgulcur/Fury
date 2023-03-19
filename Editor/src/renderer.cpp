@@ -189,13 +189,16 @@ namespace Editor {
 
 			Terrain* terrain = popped->getComponent<Terrain>();
 			if (terrain != NULL && scene->primaryCamera != NULL) {
-				terrain->update(); // that asshole should not stay here...
+
 				glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+				terrain->update(); // that asshole should not stay here...
+				terrain->onDraw(VP, camPos);
 
 
 			//	auto start = high_resolution_clock::now();
 
-				Renderer::drawTerrain(Editor::instance->sceneCamera, scene->primaryCamera, terrain);
+				//Renderer::drawTerrain(Editor::instance->sceneCamera, scene->primaryCamera, terrain);
 
 			//	auto stop = high_resolution_clock::now();
 			//	auto duration = duration_cast<microseconds>(stop - start);

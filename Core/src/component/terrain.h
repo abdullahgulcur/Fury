@@ -78,6 +78,8 @@ namespace Fury {
 		~Terrain();
 		void init();
 		void update();
+		void onDraw(glm::mat4& pv, glm::vec3& pos);
+		void drawElementsInstanced(GlewContext* glew, int size, unsigned int VAO, std::vector<TerrainVertexAttribs>& instanceArray, unsigned int indiceCount);
 		void calculateBlockPositions(glm::vec3 camPosition, int level);
 		AABB_Box getBoundingBoxOfClipmap(int clipmapIndex, int level);
 		void generateTerrainClipmapsVertexArrays();
