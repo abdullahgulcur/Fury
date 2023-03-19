@@ -190,7 +190,7 @@ namespace Editor {
 			Terrain* terrain = popped->getComponent<Terrain>();
 			if (terrain != NULL && scene->primaryCamera != NULL) {
 				terrain->update(); // that asshole should not stay here...
-				//glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 
 			//	auto start = high_resolution_clock::now();
@@ -416,25 +416,14 @@ namespace Editor {
 
 		GlewContext* glew = Core::instance->glewContext;
 
-		int count = 0;
 		//float scale = terrain->triangleSize;
 		int level = terrain->getMaxMipLevel(RESOLUTION, TILE_SIZE);// terrain->clipmapLevel;
-		int clipmapResolution = terrain->clipmapResolution;
-		float mapSize = clipmapResolution * (2 << level) * 2;
 		//int worldSize = scale * clipmapResolution * (2 << level);
 		//unsigned int elevationMapSize = terrain->elevationMapSize;
 		int programID = terrain->programID;
 		float* pvAddr = &camera->projectionViewMatrix[0][0];
 
-		// Change this for debugging purposes--------
-		//glm::vec3 camPos = camera->position;
-		float fake = 1000000;
-		glm::vec3 fakeDisplacement = glm::vec3(fake, 0, fake);
-		glm::vec3 camPos = gc->position + fakeDisplacement;
-		//-------------------------------------------
-
 		float* lightDirAddr = &glm::normalize(-glm::vec3(0.5, -1, 0.5))[0];
-		float* lightColAddr = &glm::vec3(1, 1, 1)[0];
 
 		int elevationMapTexture = terrain->elevationMapTexture;
 
@@ -457,10 +446,6 @@ namespace Editor {
 		glew->uniform3fv(glew->getUniformLocation(programID, "camPos"), 1, &camera->position[0]);
 		glew->uniform1f(glew->getUniformLocation(programID, "texSize"), (float)TILE_SIZE * MEM_TILE_ONE_SIDE);
 
-		//glew->uniform1f(glew->getUniformLocation(programID, "heightScale"), 0.1f);
-		//glew->uniform1f(glew->getUniformLocation(programID, "mapSize"), mapSize);
-		//glew->uniform3fv(glew->getUniformLocation(programID, "lightDir"), 1, lightDirAddr);
-
 		// bind pre-computed IBL data
 		glew->activeTexture(GL_TEXTURE0);
 		glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->irradianceMap);
@@ -471,12 +456,6 @@ namespace Editor {
 
 		glew->activeTexture(GL_TEXTURE3);
 		glew->bindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTexture);
-
-		// It has to be two. 
-		int patchWidth = 2;
-
-		// '4' has to be constant, because every level has 4 block at each side.
-		//int wholeClipmapRegionSize = clipmapResolution * 4 * (1 << level);
 
 		glm::vec2* blockPositions = terrain->blockPositions;
 		glm::vec2* ringFixUpPositions = terrain->ringFixUpPositions;
@@ -507,14 +486,14 @@ namespace Editor {
 				AABB_Box aabb = terrain->blockAABBs[i * 12 + j];
 				startInWorldSpace = aabb.start;
 				endInWorldSpace = aabb.end;
-			//	if (gc->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+				if (gc->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
 
 					TerrainVertexAttribs attribs;
 					attribs.level = i;
 					attribs.model = glm::mat4(1);
 					attribs.position = glm::vec2(blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y);
 					instanceArray.push_back(attribs);
-			//	}
+				}
 			}
 		}
 

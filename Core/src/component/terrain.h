@@ -6,6 +6,9 @@
 #define RESOLUTION 16384
 #define TILE_SIZE 256
 #define MEM_TILE_ONE_SIDE 4
+#define MIP_STACK_DIVISOR_RATIO 8
+#define MIP_STACK_SIZE (TILE_SIZE / MIP_STACK_DIVISOR_RATIO) * MEM_TILE_ONE_SIDE 
+
 
 namespace Fury {
 
@@ -68,24 +71,28 @@ namespace Fury {
 		std::vector<unsigned int> interiorTrimIndices;
 		unsigned int interiorTrimVAO;
 
-		unsigned char** lowDetailMipStack;
+		unsigned char** heights;
+		unsigned char** mipStack;
 		
 		Terrain();
 		~Terrain();
 		void init();
 		void update();
+		void calculateBlockPositions(glm::vec3 camPosition, int level);
+		AABB_Box getBoundingBoxOfClipmap(int clipmapIndex, int level);
 		void generateTerrainClipmapsVertexArrays();
 		void loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel);
 		void loadHeightmapAtLevel(int level, glm::vec3 camPos, unsigned char* heightData);
 		void streamTerrain(glm::vec3 newCamPos, int clipmapLevel);
 		void streamTerrainHorizontal(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level);
 		void streamTerrainVertical(glm::ivec2 old_tileIndex, glm::ivec2 old_tileStart, glm::ivec2 old_border, glm::ivec2 new_tileIndex, glm::ivec2 new_tileStart, glm::ivec2 new_border, glm::ivec2 tileDelta, int level);
-		void loadFromDiscAndWriteGPUBufferAsync(int level, int texWidth, glm::ivec2 tileStart, glm::ivec2 border, unsigned char* heightData);
+		void loadFromDiscAndWriteGPUBufferAsync(int level, int texWidth, glm::ivec2 tileStart, glm::ivec2 border, unsigned char* heightData, glm::ivec2 toroidalUpdateBorder);
 		void updateHeightMapTextureArrayPartial(int level, glm::ivec2 size, glm::ivec2 position, unsigned char* heights);
 		void deleteHeightmapArray(unsigned char** heightmapArray);
 		void createHeightMapTextureArray(unsigned char** heightmapArray);
-		void writeHeightDataToGPUBuffer(glm::ivec2 index, int texWidth, unsigned char* heightMap, unsigned char* chunk);
+		void writeHeightDataToGPUBuffer(glm::ivec2 index, int texWidth, unsigned char* heightMap, unsigned char* chunk, int level, glm::ivec2 toroidalUpdateBorder);
 		unsigned char* loadTerrainChunkFromDisc(int level, glm::ivec2 index);
+		void updateHeightsWithTerrainChunk(unsigned char* heights, unsigned char* chunk, glm::ivec2 pos, glm::ivec2 chunkSize, glm::ivec2 heightsSize);
 		glm::ivec2 getClipmapPosition(int level, glm::vec3& camPos);
 		glm::ivec2 getTileIndex(int level, glm::vec3& camPos);
 		int getMaxMipLevel(int textureSize, int tileSize);

@@ -141,4 +141,9 @@ namespace Fury {
 		lodepng::encode(imagepath, image, width, height, LodePNGColorType::LCT_GREY, 16);
 	}
 
+	void TextureFile::encodeTextureFile8Bits(unsigned int& width, unsigned int& height, std::vector<unsigned char>& image, const char* imagepath) {
+
+		lodepng::encode(imagepath, image, width, height, LodePNGColorType::LCT_GREY, 8);
+	}
+
 }

@@ -26,5 +26,7 @@ namespace Fury {
 		unsigned int loadPNGTexture(const char* imagepath); // static ?
 		static void decodeTextureFile(unsigned int& width, unsigned int& height, std::vector<unsigned char>& image, const char* imagepath);
 		static void encodeTextureFile(unsigned int& width, unsigned int& height, std::vector<unsigned char>& image, const char* imagepath);
+		static void encodeTextureFile8Bits(unsigned int& width, unsigned int& height, std::vector<unsigned char>& image, const char* imagepath);
+
 	};
 }
