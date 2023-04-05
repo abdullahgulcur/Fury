@@ -4,6 +4,7 @@
 #include "menu.h"
 #include "entity.h"
 #include "component/meshrenderer.h"
+#include "component/particlesystem.h"
 #include "component/terrain.h"
 #include "component/gamecamera.h"
 #include "filesystem/materialfile.h"
@@ -1741,7 +1742,7 @@ namespace Editor {
 		}
 		ImGui::Unindent((width - 120) / 2);
 
-		ImGui::SetNextWindowSize(ImVec2(180, 260));
+		ImGui::SetNextWindowSize(ImVec2(180, 280));
 
 		ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.18f, 0.18f, 0.18f, 1.f));
 		if (ImGui::BeginPopupContextItem("add_component_popup"))
@@ -1845,6 +1846,16 @@ namespace Editor {
 
 					meshRendererComp->meshFile = NULL;
 					meshRendererComp->materialFile = NULL;// Core::instance->fileSystem->pbrMaterialNoTexture;
+				}
+				//else
+				//	statusMessage = "There is existing component in the same type!";
+			}
+			ImGui::Separator();
+
+			if (ImGui::Selectable("   Particle System")) {
+
+				if (ParticleSystem* particleSystemComp = selectedEntity->addComponent<ParticleSystem>()) {
+					particleSystemComp->init();
 				}
 				//else
 				//	statusMessage = "There is existing component in the same type!";

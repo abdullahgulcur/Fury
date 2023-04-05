@@ -171,6 +171,7 @@
     <ClInclude Include="src\component\component.h" />
     <ClInclude Include="src\component\gamecamera.h" />
     <ClInclude Include="src\component\meshrenderer.h" />
+    <ClInclude Include="src\component\particlesystem.h" />
     <ClInclude Include="src\component\terrain.h" />
     <ClInclude Include="src\component\transform.h" />
     <ClInclude Include="src\core.h" />
@@ -585,6 +586,7 @@
     <ClCompile Include="src\component\component.cpp" />
     <ClCompile Include="src\component\gamecamera.cpp" />
     <ClCompile Include="src\component\meshrenderer.cpp" />
+    <ClCompile Include="src\component\particlesystem.cpp" />
     <ClCompile Include="src\component\terrain.cpp" />
     <ClCompile Include="src\component\transform.cpp" />
     <ClCompile Include="src\core.cpp" />
@@ -762,6 +764,8 @@
     <None Include="src\shader\framebuffer.vert" />
     <None Include="src\shader\Line.frag" />
     <None Include="src\shader\Line.vert" />
+    <None Include="src\shader\particle.frag" />
+    <None Include="src\shader\particle.vert" />
     <None Include="src\shader\PBR.frag" />
     <None Include="src\shader\PBR.vert" />
     <None Include="src\shader\PBRNoTexture.frag" />

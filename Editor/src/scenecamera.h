@@ -27,9 +27,14 @@ namespace Editor {
 
 	private:
 
+		//float rotationSpeed = 0.02;
+		//float translationSpeed = 1000;
+		//float scrollSpeed = 500;
+		//float generalSpeed = 0.3f;
+
 		float rotationSpeed = 0.02;
-		float translationSpeed = 1000;
-		float scrollSpeed = 500;
+		float translationSpeed = 10;
+		float scrollSpeed = 5;
 		float generalSpeed = 0.3f;
 
 		UINT16 controlFlags;

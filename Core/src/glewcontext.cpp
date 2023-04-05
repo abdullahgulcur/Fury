@@ -510,15 +510,15 @@ namespace Fury {
 	}
 
 	void GlewContext::genVertexArrays(unsigned int size, unsigned int* arrays) {
-		glGenVertexArrays(size, arrays);
+		GLCall(glGenVertexArrays(size, arrays));
 	}
 
 	void GlewContext::genBuffers(unsigned int size, unsigned int* buffers) {
-		glGenBuffers(size, buffers);
+		GLCall(glGenBuffers(size, buffers));
 	}
 
 	void GlewContext::bindVertexArray(unsigned int VAO) {
-		glBindVertexArray(VAO);
+		GLCall(glBindVertexArray(VAO));
 	}
 
 	void GlewContext::bindArrayBuffer(unsigned int VBO) {
@@ -582,11 +582,11 @@ namespace Fury {
 	}
 
 	void GlewContext::bindBuffer(unsigned int mode, unsigned int buffer) {
-		glBindBuffer(mode, buffer);
+		GLCall(glBindBuffer(mode, buffer));
 	}
 
 	void GlewContext::bufferData(unsigned int target, unsigned int size, void* data, unsigned int usage) {
-		glBufferData(target, size, data, usage);
+		GLCall(glBufferData(target, size, data, usage));
 	}
 	void GlewContext::vertexAttribPointer(unsigned int index, unsigned int size, unsigned int type, unsigned int normalized, unsigned int stride, void* pointer) {
 		GLCall(glVertexAttribPointer(index, size, type, normalized, stride, pointer));

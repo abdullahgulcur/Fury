@@ -3,6 +3,7 @@
 #include "editor.h"
 #include "scenecamera.h"
 #include "component/gamecamera.h"
+#include "component/particlesystem.h"
 #include "entity.h"
 #include "scene.h"
 #include "glm/glm.hpp"
@@ -143,7 +144,7 @@ namespace Editor {
         glewContext->vertexAttribPointer(2, 2, stride, (void*)(6 * sizeof(float)));
 	}
 
-	void Renderer::update() {
+	void Renderer::update(float dt) {
 
 		/* reset */
 		drawCallCount = 0;
@@ -209,6 +210,12 @@ namespace Editor {
 			//	//std::cout << "Time taken by terrain draw function (instanced): " << duration.count() << " microseconds" << std::endl;
 
 			//	//glew->polygonMode(GL_BACK, GL_TRIANGLES);
+			}
+
+			ParticleSystem* particleSystem = popped->getComponent<ParticleSystem>();
+			if (particleSystem != NULL) {
+				particleSystem->onUpdate(dt);
+				particleSystem->onDraw(VP, camPos);
 			}
 
 			for (Transform*& child : popped->transform->children)

@@ -25,7 +25,7 @@ namespace Editor{
 
 		menu->update();
 		sceneCamera->update(dt);
-		renderer->update();
+		renderer->update(dt);
 	}
 
 	Editor* Editor::getInstance() {

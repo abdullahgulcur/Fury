@@ -72,6 +72,9 @@ namespace Fury {
 		if (GameCamera* cameraComp = transform->entity->getComponent<GameCamera>())
 			saveGameCameraComponent(doc, entity, cameraComp);
 
+		if (ParticleSystem* particleSystemComp = transform->entity->getComponent<ParticleSystem>())
+			saveParticleSystemComponent(doc, entity, particleSystemComp);
+
 		//for (auto& comp : child->entity->getComponents<BoxCollider>())
 		//	saveBoxColliderComponent(doc, entity, comp);
 
@@ -168,6 +171,7 @@ namespace Fury {
 			//SceneFile::loadMeshColliderComponents(ent, entityNode);
 			//SceneFile::loadRigidbodyComponent(ent, entityNode);
 			SceneFile::loadGameCameraComponent(ent, entityNode);
+			SceneFile::loadParticleSystemComponent(ent, entityNode);
 
 			SceneFile::loadEntitiesRecursively(entityNode, ent);
 		}
@@ -356,4 +360,29 @@ namespace Fury {
 		return true;
 	}
 
+	bool SceneFile::saveParticleSystemComponent(rapidxml::xml_document<>& doc, rapidxml::xml_node<>* entNode, ParticleSystem* particleSystem) {
+
+		rapidxml::xml_node<>* particleSystemNode = doc.allocate_node(rapidxml::node_element, "ParticleSystem");
+		//terrainNode ->append_attribute(doc.allocate_attribute("ClipmapResolution", doc.allocate_string(std::to_string(terrin->clipmapResolution).c_str())));
+		//terrainNode ->append_attribute(doc.allocate_attribute("ClipmapLevel", doc.allocate_string(std::to_string(terrin->clipmapLevel).c_str())));
+		//terrainNode ->append_attribute(doc.allocate_attribute("TriangleSize", doc.allocate_string(std::to_string(terrin->triangleSize).c_str())));
+		entNode->append_node(particleSystemNode);
+
+		return true;
+	}
+
+	bool SceneFile::loadParticleSystemComponent(Entity* ent, rapidxml::xml_node<>* entNode) {
+
+		rapidxml::xml_node<>* cameraNode = entNode->first_node("ParticleSystem");
+
+		if (cameraNode == NULL)
+			return false;
+
+		ParticleSystem* particleSystemComp = ent->addComponent<ParticleSystem>();
+		//particleSystemComp->clipmapResolution = 120;// atoi(cameraNode->first_attribute("ClipmapResolution")->value());
+		////terrainComp->clipmapLevel = 4;// atoi(cameraNode->first_attribute("ClipmapLevel")->value());
+		////terrainComp->triangleSize = atof(cameraNode->first_attribute("TriangleSize")->value());
+		particleSystemComp->init();
+		return true;
+	}
 }

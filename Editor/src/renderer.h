@@ -41,7 +41,7 @@ namespace Editor {
 		void initDefaultSphere();
 		void initMaterialFileTextures();
 		void initMeshFileTextures();
-		void update();
+		void update(float dt);
 		void drawTerrain(SceneCamera* camera, GameCamera* gc, Terrain* terrain);
 	/*	void drawInternalPart(int programID, int blockVAO, int ringFixupVAO, int smallSquareVAO, int blockIndiceCount,
 			int ringFixupIndiceCount, int smallSquareIndiceCount, int clipmapResolution, 

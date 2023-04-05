@@ -1233,6 +1233,9 @@
     <ClInclude Include="src\material\globalvolume.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\component\particlesystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -1314,6 +1317,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\material\globalvolume.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\component\particlesystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1786,5 +1792,7 @@
     <None Include="src\shader\temp\2.1.1.equirectangular_to_cubemap.fs" />
     <None Include="src\shader\temp\2.1.1.pbr.fs" />
     <None Include="src\shader\temp\2.1.1.pbr.vs" />
+    <None Include="src\shader\particle.vert" />
+    <None Include="src\shader\particle.frag" />
   </ItemGroup>
 </Project>
