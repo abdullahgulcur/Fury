@@ -1347,7 +1347,10 @@ namespace Fury {
 		if (file->type == FileType::scene) {
 			SceneFile* sceneFile = fileToSceneFile[file];
 			sceneFile->renameFile(file->path, file->name);
-			Core::instance->sceneManager->renameCurrentScene(file->name);
+
+			if(Core::instance->sceneManager->currentScene)
+				Core::instance->sceneManager->renameCurrentScene(file->name);
+
 			Core::instance->sceneManager->saveSceneManagerFile();
 		}
 

@@ -120,7 +120,11 @@ namespace Fury {
 		doc.append_node(decl);
 
 		rapidxml::xml_node<>* active_scene_node = doc.allocate_node(rapidxml::node_element, "ActiveScene");
-		active_scene_node->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(currentScene->name.c_str())));
+		if(currentScene)
+			active_scene_node->append_attribute(doc.allocate_attribute("Name", doc.allocate_string(currentScene->name.c_str())));
+		else
+			active_scene_node->append_attribute(doc.allocate_attribute("Name", doc.allocate_string("null")));
+
 		doc.append_node(active_scene_node);
 
 		std::string xml_as_string;

@@ -130,9 +130,11 @@ namespace Fury {
 		rapidxml::xml_node<>* entitiesNode = doc.allocate_node(rapidxml::node_element, "Entities");
 		sceneNode->append_node(entitiesNode);
 
-		Transform* root = Core::instance->sceneManager->currentScene->root->transform;
-		for (Transform* child : root->children)
-			SceneFile::saveEntitiesRecursively(child, doc, entitiesNode);
+		if (Scene* currentScene = Core::instance->sceneManager->currentScene) {
+			Transform* root = currentScene->root->transform;
+			for (Transform* child : root->children)
+				SceneFile::saveEntitiesRecursively(child, doc, entitiesNode);
+		}
 
 		std::string xml_as_string;
 		rapidxml::print(std::back_inserter(xml_as_string), doc);
@@ -347,7 +349,7 @@ namespace Fury {
 			return false;
 
 		Terrain* terrainComp = ent->addComponent<Terrain>();
-		terrainComp->clipmapResolution = 60;// atoi(cameraNode->first_attribute("ClipmapResolution")->value());
+		terrainComp->clipmapResolution = 120;// atoi(cameraNode->first_attribute("ClipmapResolution")->value());
 		//terrainComp->clipmapLevel = 4;// atoi(cameraNode->first_attribute("ClipmapLevel")->value());
 		//terrainComp->triangleSize = atof(cameraNode->first_attribute("TriangleSize")->value());
 		terrainComp->init();

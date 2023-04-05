@@ -43,9 +43,24 @@ namespace Fury {
 
 	void Terrain::init() {
 
+
 		GameCamera* camera = Core::instance->sceneManager->currentScene->primaryCamera;
 		GlewContext* glew = Core::instance->glewContext;
 		int lodLevel = Terrain::getMaxMipLevel(RESOLUTION, TILE_SIZE);
+
+
+		// create mipmaps
+		//std::string path = "hhhhh.png";
+		//std::vector<unsigned char> out;
+		//unsigned int w, h;
+		//lodepng::decode(out, w, h, path, LodePNGColorType::LCT_GREY, 16);
+		//unsigned char* data = new unsigned char[w * w * 2];
+		//for (int i = 0; i < out.size(); i++)
+		//	data[i] = out[i];
+
+		//unsigned char** heightMapList = Terrain::createMipmaps(data, w);
+		//Terrain::divideTerrainHeightmaps(heightMapList, w);
+
 
 		blockPositions = new glm::vec2[12 * lodLevel + 4];
 		ringFixUpPositions = new glm::vec2[4 * lodLevel + 4];
@@ -78,6 +93,7 @@ namespace Fury {
 		for (int i = 0; i < lodLevel; i++)
 			for (int j = 0; j < 12; j++)
 				blockAABBs[12 * i + j] = Terrain::getBoundingBoxOfClipmap(j, i);
+
 	}
 
 	void Terrain::loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel) {
@@ -122,14 +138,14 @@ namespace Fury {
 				it.join();
 
 		// DEBUG
-		//std::vector<unsigned char> out(MIP_STACK_SIZE * MIP_STACK_SIZE);
-		//for (int i = 0; i < MIP_STACK_SIZE * MIP_STACK_SIZE; i++)
-		//	out[i] = mipStack[level][i];
+		//std::vector<unsigned char> out(TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2);
+		//for (int i = 0; i < TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2; i++)
+		//	out[i] = heights[level][i];
 
-		//unsigned int width = MIP_STACK_SIZE;
-		//unsigned int height = MIP_STACK_SIZE;
-		//std::string imagePath = "mipStack_" + std::to_string(level) + ".png";
-		//TextureFile::encodeTextureFile8Bits(width, height, out, &imagePath[0]);
+		//unsigned int width = TILE_SIZE * MEM_TILE_ONE_SIDE;
+		//unsigned int height = TILE_SIZE * MEM_TILE_ONE_SIDE;
+		//std::string imagePath = "heights" + std::to_string(level) + ".png";
+		//TextureFile::encodeTextureFile(width, height, out, &imagePath[0]);
 	}
 
 	void Terrain::update() {
@@ -682,6 +698,17 @@ namespace Fury {
 			}
 
 			delete[] heightData;
+
+
+			//// DEBUG
+			//std::vector<unsigned char> out(TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2);
+			//for (int i = 0; i < TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2; i++)
+			//	out[i] = heights[level][i];
+
+			//unsigned int width = TILE_SIZE * MEM_TILE_ONE_SIDE;
+			//unsigned int height = TILE_SIZE * MEM_TILE_ONE_SIDE;
+			//std::string imagePath = "heights" + std::to_string(level) + ".png";
+			//TextureFile::encodeTextureFile(width, height, out, &imagePath[0]);
 		}
 		else if (tileDelta.x < 0) {
 
@@ -754,6 +781,16 @@ namespace Fury {
 			}
 
 			delete[] heightData;
+
+			//// DEBUG
+			//std::vector<unsigned char> out(TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2);
+			//for (int i = 0; i < TILE_SIZE * MEM_TILE_ONE_SIDE * TILE_SIZE * MEM_TILE_ONE_SIDE * 2; i++)
+			//	out[i] = heights[level][i];
+
+			//unsigned int width = TILE_SIZE * MEM_TILE_ONE_SIDE;
+			//unsigned int height = TILE_SIZE * MEM_TILE_ONE_SIDE;
+			//std::string imagePath = "heights" + std::to_string(level) + ".png";
+			//TextureFile::encodeTextureFile(width, height, out, &imagePath[0]);
 		}
 		else if (tileDelta.y < 0) {
 
@@ -853,7 +890,7 @@ namespace Fury {
 
 				int indexInChunk = (i * TILE_SIZE + j) * 2;
 				int indexInHeightmap = ((i + startZ) * texWidth + j + startX) * 2;
-				int indexInHeights = ((i + startZinHeights) * texWidth + j + startXinHeights) * 2;
+				int indexInHeights = ((i + startZinHeights) * TILE_SIZE * MEM_TILE_ONE_SIDE + j + startXinHeights) * 2;
 
 				// Data that will be sent to GPU
 				heightMap[indexInHeightmap] = chunk[indexInChunk];
@@ -878,9 +915,10 @@ namespace Fury {
 	// okurken yaz ;)
 	unsigned char* Terrain::loadTerrainChunkFromDisc(int level, glm::ivec2 index) {
 
-		std::string path = "textures/map_" + std::to_string(level) + '_' + std::to_string(index.y) + '_' + std::to_string(index.x) + "_.png";
+		std::string path = "heightmaps/map_" + std::to_string(level) + '_' + std::to_string(index.y) + '_' + std::to_string(index.x) + "_.png";
 		std::vector<unsigned char> out;
 		unsigned int w, h;
+
 		lodepng::decode(out, w, h, path, LodePNGColorType::LCT_GREY, 16);
 
 		unsigned char* data = new unsigned char[TILE_SIZE * TILE_SIZE * 2];
@@ -1145,8 +1183,166 @@ namespace Fury {
 			num *= 2;
 			lodLevel++;
 		}
-		//return lodLevel;
 		return 4;
+		//return lodLevel;
+	}
+
+	unsigned char** Terrain::createMipmaps(unsigned char* heights, int size) {
+
+		// 8 bits
+		//int mipCount = 0;
+		//int sizeIterator = size;
+
+		//while (sizeIterator >= 256) {
+		//	sizeIterator /= 2;
+		//	mipCount++;
+		//}
+		//unsigned char** mipmaps = new unsigned char* [mipCount];
+
+		//int totalSize = size * size;
+		//mipmaps[0] = new unsigned char[totalSize];
+
+		//for (int i = 0; i < totalSize; i++)
+		//	mipmaps[0][i] = heights[i];
+
+		//int counter = 1;
+		//while (counter < mipCount) {
+
+		//	size /= 2;
+		//	mipmaps[counter] = new unsigned char[size * size];
+
+		//	for (int i = 0; i < size; i++) {
+		//		for (int j = 0; j < size; j++) {
+
+		//			int indexInFinerLevel = ((i * 2) * size * 2) + j * 2;//(i * size * 2 + j) * 2;
+		//			int indexInCoarserLevel = (i * size + j);
+		//			mipmaps[counter][indexInCoarserLevel] = mipmaps[counter - 1][indexInFinerLevel];
+		//		}
+		//	}
+
+		//	std::vector<unsigned char> out(size * size);
+		//	for (int i = 0; i < size * size; i++)
+		//		out[i] = mipmaps[counter][i];
+
+		//	unsigned int width = size;
+		//	unsigned int height = size;
+		//	std::string imagePath = "mipmap" + std::to_string(counter) + ".png";
+		//	TextureFile::encodeTextureFile8Bits(width, height, out, &imagePath[0]);
+
+		//	counter++;
+		//}
+
+		// 16 bits
+		int mipCount = 0;
+		int sizeIterator = size;
+
+		while (sizeIterator >= TILE_SIZE) {
+			sizeIterator /= 2;
+			mipCount++;
+		}
+		unsigned char** mipmaps = new unsigned char* [mipCount];
+
+		int totalSize = size * size * 2;
+		mipmaps[0] = new unsigned char[totalSize];
+
+		for (int i = 0; i < totalSize; i++)
+			mipmaps[0][i] = heights[i];
+
+		int counter = 1;
+		while (counter < mipCount) {
+
+			size /= 2;
+			mipmaps[counter] = new unsigned char[size * size * 2];
+
+			for (int i = 0; i < size; i++) {
+				for (int j = 0; j < size; j++) {
+
+					int indexInFinerLevel = (i * size * 2 + j) * 4;
+					int indexInCoarserLevel = (i * size + j) * 2;
+					mipmaps[counter][indexInCoarserLevel] = mipmaps[counter - 1][indexInFinerLevel];
+					mipmaps[counter][indexInCoarserLevel + 1] = mipmaps[counter - 1][indexInFinerLevel + 1];
+				}
+			}
+
+			//std::vector<unsigned char> out(size * size * 2);
+			//for (int i = 0; i < size * size * 2; i++)
+			//	out[i] = mipmaps[counter][i];
+
+			//unsigned int width = size;
+			//unsigned int height = size;
+			//std::string imagePath = "mipmap" + std::to_string(counter) + ".png";
+			//TextureFile::encodeTextureFile(width, height, out, &imagePath[0]);
+
+			counter++;
+		}
+
+		return mipmaps;
+	}
+
+	void Terrain::createHeightmapImageFile(unsigned char* heights, int level, int newTileSize, int baseTileSize, int ind_x, int ind_z) {
+
+		std::vector<unsigned char> heightImage(newTileSize * newTileSize * 2);
+
+		int coord_x = ind_x * newTileSize;
+		int coord_z = ind_z * newTileSize;
+
+		for (int z = 0; z < newTileSize; z++) {
+			for (int x = 0; x < newTileSize; x++) {
+
+				int baseCoord = ((z + coord_z) * baseTileSize + (x + coord_x)) * 2;
+				int newCoord = (z * newTileSize + x) * 2;
+				heightImage[newCoord] = heights[baseCoord];
+				heightImage[newCoord + 1] = heights[baseCoord + 1];
+			}
+		}
+
+		unsigned int width = newTileSize;
+		unsigned int height = newTileSize;
+		std::string imagePath = "heightmaps/map_" + std::to_string(level) + '_' + std::to_string(ind_z) + '_' + std::to_string(ind_x) + "_.png";
+		TextureFile::encodeTextureFile(width, height, heightImage, &imagePath[0]);
+
+		//std::vector<unsigned char> heightImage(newTileSize * newTileSize);
+
+		//int coord_x = ind_x * newTileSize;
+		//int coord_z = ind_z * newTileSize;
+
+		//for (int z = 0; z < newTileSize; z++) {
+		//	for (int x = 0; x < newTileSize; x++) {
+
+		//		int baseCoord = ((z + coord_z) * baseTileSize + (x + coord_x));
+		//		int newCoord = (z * newTileSize + x);
+		//		heightImage[newCoord] = heights[baseCoord];
+		//	}
+		//}
+
+		//unsigned int width = newTileSize;
+		//unsigned int height = newTileSize;
+		//std::string imagePath = "heightmaps/map_" + std::to_string(level) + '_' + std::to_string(ind_z) + '_' + std::to_string(ind_x) + "_.png";
+		//TextureFile::encodeTextureFile8Bits(width, height, heightImage, &imagePath[0]);
+	}
+
+	void Terrain::divideTerrainHeightmaps(unsigned char** heightMapList, int width) {
+
+		int mipCount = 0;
+		int sizeIterator = width;
+
+		while (sizeIterator >= TILE_SIZE) {
+			sizeIterator /= 2;
+			mipCount++;
+		}
+
+		int res = width;
+
+		for (int level = 0; level < mipCount; level++) {
+
+			int numTiles = res / TILE_SIZE;
+			for (int i = 0; i < numTiles; i++)
+				for (int j = 0; j < numTiles; j++)
+					//make multi-threaded ?
+					Terrain::createHeightmapImageFile(heightMapList[level], level, TILE_SIZE, res, j, i);
+
+			res /= 2;
+		}
 	}
 
 }

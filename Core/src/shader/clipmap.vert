@@ -30,6 +30,7 @@ void main(void)
     vec2 heightSample = texture(heightmapArray, vec3(texCoords.xy, level_instance)).rg;
 
     pos.y = heightSample.r * 65.536f + heightSample.g * 0.256f;
+    pos.y *= 5;
 
     gl_Position =  PV * vec4(pos, 1.0);
 }

@@ -190,7 +190,7 @@ namespace Editor {
 			Terrain* terrain = popped->getComponent<Terrain>();
 			if (terrain != NULL && scene->primaryCamera != NULL) {
 
-				glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+				//glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 				terrain->update(); // that asshole should not stay here...
 				terrain->onDraw(VP, camPos);
@@ -489,14 +489,14 @@ namespace Editor {
 				AABB_Box aabb = terrain->blockAABBs[i * 12 + j];
 				startInWorldSpace = aabb.start;
 				endInWorldSpace = aabb.end;
-				if (gc->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+			//	if (gc->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
 
 					TerrainVertexAttribs attribs;
 					attribs.level = i;
 					attribs.model = glm::mat4(1);
 					attribs.position = glm::vec2(blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y);
 					instanceArray.push_back(attribs);
-				}
+			//	}
 			}
 		}
 

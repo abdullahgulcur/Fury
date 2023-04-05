@@ -3,7 +3,7 @@
 #include "glewcontext.h"
 #include "glm/glm.hpp"
 
-#define RESOLUTION 16384
+#define RESOLUTION 8192
 #define TILE_SIZE 256
 #define MEM_TILE_ONE_SIDE 4
 #define MIP_STACK_DIVISOR_RATIO 8
@@ -98,5 +98,8 @@ namespace Fury {
 		glm::ivec2 getClipmapPosition(int level, glm::vec3& camPos);
 		glm::ivec2 getTileIndex(int level, glm::vec3& camPos);
 		int getMaxMipLevel(int textureSize, int tileSize);
+		unsigned char** createMipmaps(unsigned char* heights, int size);
+		void createHeightmapImageFile(unsigned char* heights, int level, int newTileSize, int baseTileSize, int ind_x, int ind_z);
+		void divideTerrainHeightmaps(unsigned char** heightMapList, int width);
 	};
 }
