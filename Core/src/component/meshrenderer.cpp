@@ -1,17 +1,79 @@
 #include "pch.h"
 #include "meshrenderer.h"
+#include "entity.h"
 #include "filesystem/meshfile.h"
 #include "filesystem/materialfile.h"
 #include "core.h"
 
 namespace Fury {
 
-	MeshRenderer::MeshRenderer() {
+	MeshRenderer::MeshRenderer(Entity* entity) : Component(entity) {
 	}
 
 	MeshRenderer::~MeshRenderer() {
 
 		MeshRenderer::releaseAllFiles();
+	}
+
+	void MeshRenderer::start() {
+
+	}
+
+	void MeshRenderer::update(float dt) {
+
+		if (!meshFile || !materialFile)
+			return;
+
+		glm::mat4 model = entity->transform->model;
+		glm::vec4 startInWorldSpace = model * meshFile->aabbBox.start;
+		glm::vec4 endInWorldSpace = model * meshFile->aabbBox.end;
+
+		//if (!camera->intersectsAABB(startInWorldSpace, endInWorldSpace))
+		//    continue;
+
+		PBRMaterial* pbrMaterial = Core::instance->fileSystem->pbrMaterial;
+		GlewContext* glew = Core::instance->glewContext;
+		GlobalVolume* globalVolume = Core::instance->fileSystem->globalVolume;
+
+		CameraInfo& cameraInfo = Core::instance->renderer->cameraInfo;
+
+		switch (materialFile->shaderType) {
+
+		case ShaderType::PBR: {
+
+			unsigned int pbrShaderProgramId = pbrMaterial->pbrShaderProgramId;
+			glew->useProgram(pbrShaderProgramId);
+			glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "projection"), 1, GL_FALSE, &cameraInfo.projection[0][0]);
+			glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "view"), 1, GL_FALSE, &cameraInfo.view[0][0]);
+			glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "model"), 1, GL_FALSE, &model[0][0]);
+			glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, "camPos"), 1, &cameraInfo.camPos[0]);
+
+			// bind pre-computed IBL data
+			glew->activeTexture(GL_TEXTURE0);
+			glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->irradianceMap);
+			glew->activeTexture(GL_TEXTURE1);
+			glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->prefilterMap);
+			glew->activeTexture(GL_TEXTURE2);
+			glew->bindTexture(GL_TEXTURE_2D, globalVolume->brdfLUTTexture);
+
+			// illaki farkli channel texture lar bake lenmesine gerek yok, runtime da da halledilebilir. daha iyi use experience sunar
+			for (int i = 0; i < materialFile->textureFiles.size(); i++) {
+
+				std::string texStr = "texture" + std::to_string(i);
+				glew->activeTexture(GL_TEXTURE3 + i);
+				glew->bindTexture(GL_TEXTURE_2D, materialFile->textureFiles[i]->textureId);
+			}
+
+			glew->bindVertexArray(meshFile->VAO);
+			glew->drawElements(0x0004, meshFile->indiceCount, 0x1405, (void*)0);
+			glew->bindVertexArray(0);
+
+			break;
+		}
+		case ShaderType::PBR_ALPHA: {
+			break;
+		}
+		}
 	}
 
 	/*

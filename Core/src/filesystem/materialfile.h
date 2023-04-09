@@ -25,7 +25,7 @@ namespace Fury {
 		//unsigned int programId;
 		ShaderType shaderType;
 		std::vector<TextureFile*> textureFiles; // bir material e ayni texture lar konulmucak !
-		std::vector<float> floats;
+		//std::vector<float> floats;
 		//UINT8 activeTexture;
 		//std::vector<unsigned int> activeTextureIndices;
 

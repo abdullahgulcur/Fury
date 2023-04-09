@@ -2,14 +2,21 @@
 
 namespace Fury {
 
+	class Entity;
+
 	class __declspec(dllexport) Component {
 
 	private:
 
-	public:
+	protected:
 
-		Component();
+	public:
+		Entity* entity;
+
+		Component(Entity* entity);
 		virtual ~Component();
+		virtual void start(); // void* params, unsigned int length
+		virtual void update(float dt);
 		virtual void destroy();
 
 	};

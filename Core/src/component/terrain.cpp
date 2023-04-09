@@ -1,10 +1,11 @@
 #include "pch.h"
 #include "terrain.h"
-#include "terrain.h"
+//#include "entity.h"
 #include "core.h"
 #include "scenemanager.h"
 #include "scene.h"
 #include "glewcontext.h"
+#include "gl/glew.h"
 #include "component/gamecamera.h"
 #include "lodepng/lodepng.h"
 #include "FreeImage.h"
@@ -13,7 +14,7 @@ using namespace std::chrono;
 
 namespace Fury {
 
-	Terrain::Terrain() { }
+	Terrain::Terrain(Entity* entity) : Component(entity) { }
 
 	Terrain::~Terrain() {
 
@@ -41,16 +42,23 @@ namespace Fury {
 		delete[] mipStack;
 	}
 
-	void Terrain::init() {
+	void Terrain::start() {
 
 
 		GameCamera* camera = Core::instance->sceneManager->currentScene->primaryCamera;
+		//glm::vec3 camPos = camera->entity->transform->getGlobalPosition();
+
+		//if (camPos.x < 4096.f || camPos.x > 6144.f || camPos.z < 4096.f || camPos.z > 6144.f) {
+		//	camera->position.x = 5000.f;
+		//	camera->position.z = 5000.f;
+		//}
+
 		GlewContext* glew = Core::instance->glewContext;
 		int lodLevel = Terrain::getMaxMipLevel(RESOLUTION, TILE_SIZE);
 
 
-		// create mipmaps
-		//std::string path = "hhhhh.png";
+		//// create mipmaps
+		//std::string path = "terrain.png";
 		//std::vector<unsigned char> out;
 		//unsigned int w, h;
 		//lodepng::decode(out, w, h, path, LodePNGColorType::LCT_GREY, 16);
@@ -85,6 +93,9 @@ namespace Fury {
 		glew->uniform1i(glew->getUniformLocation(programID, "prefilterMap"), 1);
 		glew->uniform1i(glew->getUniformLocation(programID, "brdfLUT"), 2);
 		glew->uniform1i(glew->getUniformLocation(programID, "heightmapArray"), 3);
+		glew->uniform1i(glew->getUniformLocation(programID, "albedoArray"), 4);
+		glew->uniform1i(glew->getUniformLocation(programID, "normalArray"), 5);
+		glew->uniform1i(glew->getUniformLocation(programID, "maskArray"), 6);
 
 		cameraPosition = camera->position;
 		Terrain::loadTerrainHeightmapOnInit(cameraPosition, lodLevel);
@@ -94,6 +105,7 @@ namespace Fury {
 			for (int j = 0; j < 12; j++)
 				blockAABBs[12 * i + j] = Terrain::getBoundingBoxOfClipmap(j, i);
 
+		Terrain::createAlbedoMapTextureArray();
 	}
 
 	void Terrain::loadTerrainHeightmapOnInit(glm::vec3 camPos, int clipmapLevel) {
@@ -101,7 +113,7 @@ namespace Fury {
 		for (int level = 0; level < clipmapLevel; level++)
 			Terrain::loadHeightmapAtLevel(level, camPos, heights[level]);
 
-		Terrain::createHeightMapTextureArray(heights);
+		Terrain::createElevationMapTextureArray(heights);
 	}
 
 	void Terrain::loadHeightmapAtLevel(int level, glm::vec3 camPos, unsigned char* heightData) {
@@ -148,11 +160,12 @@ namespace Fury {
 		//TextureFile::encodeTextureFile(width, height, out, &imagePath[0]);
 	}
 
-	void Terrain::update() {
+	void Terrain::update(float dt) {
 
 		int level = Terrain::getMaxMipLevel(RESOLUTION, TILE_SIZE);
 		glm::vec3 camPosition = Core::instance->sceneManager->currentScene->primaryCamera->position;
-		
+		camPosition = glm::clamp(camPosition, glm::vec3(4100,0,4100), glm::vec3(6100,0,6100));
+
 		Terrain::calculateBlockPositions(camPosition, level);
 		Terrain::streamTerrain(camPosition, level);
 	}
@@ -168,7 +181,7 @@ namespace Fury {
 
 		float* lightDirAddr = &glm::normalize(-glm::vec3(0.5, -1, 0.5))[0];
 
-		int elevationMapTexture = this->elevationMapTexture;
+		glm::vec3 test = camera->position;
 
 		int blockVAO = this->blockVAO;
 		int ringFixUpVAO = this->ringFixUpVAO;
@@ -187,7 +200,9 @@ namespace Fury {
 		glew->useProgram(programID);
 		glew->uniformMatrix4fv(glew->getUniformLocation(programID, "PV"), 1, 0, &pv[0][0]);
 		glew->uniform3fv(glew->getUniformLocation(programID, "camPos"), 1, &pos[0]);
+		glew->uniform3fv(glew->getUniformLocation(programID, "camPoss"), 1, &test[0]);
 		glew->uniform1f(glew->getUniformLocation(programID, "texSize"), (float)TILE_SIZE * MEM_TILE_ONE_SIDE);
+		glew->uniform1f(glew->getUniformLocation(programID, "heightScale"), -displacementMapScale);
 
 		// bind pre-computed IBL data
 		glew->activeTexture(GL_TEXTURE0);
@@ -200,6 +215,13 @@ namespace Fury {
 		glew->activeTexture(GL_TEXTURE3);
 		glew->bindTexture(GL_TEXTURE_2D_ARRAY, elevationMapTexture);
 
+		glew->activeTexture(GL_TEXTURE4);
+		glew->bindTexture(GL_TEXTURE_2D_ARRAY, albedoTextureArray);
+		glew->activeTexture(GL_TEXTURE5);
+		glew->bindTexture(GL_TEXTURE_2D_ARRAY, normalTextureArray);
+		glew->activeTexture(GL_TEXTURE6);
+		glew->bindTexture(GL_TEXTURE_2D_ARRAY, maskTextureArray);
+		
 		glm::vec2* blockPositions = this->blockPositions;
 		glm::vec2* ringFixUpPositions = this->ringFixUpPositions;
 		glm::vec2* interiorTrimPositions = this->interiorTrimPositions;
@@ -220,14 +242,16 @@ namespace Fury {
 				AABB_Box aabb = blockAABBs[i * 12 + j];
 				startInWorldSpace = aabb.start;
 				endInWorldSpace = aabb.end;
-				if (camera->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+			//	if (camera->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
 
 					TerrainVertexAttribs attribs;
 					attribs.level = i;
 					attribs.model = glm::mat4(1);
 					attribs.position = glm::vec2(blockPositions[i * 12 + j].x, blockPositions[i * 12 + j].y);
+					glm::ivec2 clipmapcenter = Terrain::getClipmapPosition(i, test);
+					attribs.clipmapcenter = clipmapcenter;
 					instanceArray.push_back(attribs);
-				}
+			//	}
 			}
 		}
 
@@ -237,6 +261,8 @@ namespace Fury {
 			attribs.level = 0;
 			attribs.model = glm::mat4(1);
 			attribs.position = glm::vec2(blockPositions[level * 12 + i].x, blockPositions[level * 12 + i].y);
+			glm::ivec2 clipmapcenter = Terrain::getClipmapPosition(0, test);
+			attribs.clipmapcenter = clipmapcenter;
 			instanceArray.push_back(attribs);
 		}
 
@@ -252,6 +278,8 @@ namespace Fury {
 			TerrainVertexAttribs attribs;
 			attribs.level = i;
 			attribs.model = model;
+			glm::ivec2 clipmapcenter = Terrain::getClipmapPosition(i, test);
+			attribs.clipmapcenter = clipmapcenter;
 
 			attribs.position = glm::vec2(ringFixUpPositions[i * 4 + 0].x, ringFixUpPositions[i * 4 + 0].y);
 			instanceArray.push_back(attribs);
@@ -268,9 +296,12 @@ namespace Fury {
 		}
 
 		{
+
 			TerrainVertexAttribs attribs;
 			attribs.level = 0;
 			attribs.model = glm::mat4(1);
+			glm::ivec2 clipmapcenter = Terrain::getClipmapPosition(0, test);
+			attribs.clipmapcenter = clipmapcenter;
 
 			attribs.position = glm::vec2(ringFixUpPositions[level * 4 + 0].x, ringFixUpPositions[level * 4 + 0].y);
 			instanceArray.push_back(attribs);
@@ -295,6 +326,8 @@ namespace Fury {
 			glm::mat4 model = glm::rotate(glm::mat4(1), glm::radians(rotAmounts[i]), glm::vec3(0.0f, 1.0f, 0.0f));
 
 			TerrainVertexAttribs attribs;
+			glm::ivec2 clipmapcenter = Terrain::getClipmapPosition(i + 1, test);
+			attribs.clipmapcenter = clipmapcenter;
 			attribs.level = i + 1;
 			attribs.model = model;
 			attribs.position = glm::vec2(interiorTrimPositions[i].x, interiorTrimPositions[i].y);
@@ -311,6 +344,8 @@ namespace Fury {
 			TerrainVertexAttribs attribs;
 			attribs.level = i;
 			attribs.model = model;
+			glm::ivec2 clipmapcenter = Terrain::getClipmapPosition(i, test);
+			attribs.clipmapcenter = clipmapcenter;
 
 			attribs.position = glm::vec2(outerDegeneratePositions[i * 4 + 0].x, outerDegeneratePositions[i * 4 + 0].y);
 			instanceArray.push_back(attribs);
@@ -330,6 +365,8 @@ namespace Fury {
 
 		// SMALL SQUARE
 		TerrainVertexAttribs attribs;
+		glm::ivec2 clipmapcenter = Terrain::getClipmapPosition(0, test);
+		attribs.clipmapcenter = clipmapcenter;
 		attribs.level = 0;
 		attribs.model = glm::mat4(1);
 		attribs.position = glm::vec2(smallSquarePosition.x, smallSquarePosition.y);
@@ -349,15 +386,17 @@ namespace Fury {
 		glew->enableVertexAttribArray(1);
 		glew->vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, size, (void*)0);
 		glew->enableVertexAttribArray(2);
-		glew->vertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
+		glew->vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2)));
 		glew->enableVertexAttribArray(3);
-		glew->vertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float)));
+		glew->vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2));
 		glew->enableVertexAttribArray(4);
-		glew->vertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4)));
+		glew->vertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2 + sizeof(float)));
 		glew->enableVertexAttribArray(5);
-		glew->vertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 2));
+		glew->vertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2 + sizeof(float) + sizeof(glm::vec4)));
 		glew->enableVertexAttribArray(6);
-		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) + sizeof(float) + sizeof(glm::vec4) * 3));
+		glew->vertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2 + sizeof(float) + sizeof(glm::vec4) * 2));
+		glew->enableVertexAttribArray(7);
+		glew->vertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, size, (void*)(sizeof(glm::vec2) * 2 + sizeof(float) + sizeof(glm::vec4) * 3));
 
 		glew->vertexAttribDivisor(1, 1);
 		glew->vertexAttribDivisor(2, 1);
@@ -853,7 +892,7 @@ namespace Fury {
 		delete[] heightmapArray;
 	}
 
-	void Terrain::createHeightMapTextureArray(unsigned char** heightmapArray) {
+	void Terrain::createElevationMapTextureArray(unsigned char** heightmapArray) {
 
 		GlewContext* glew = Core::instance->glewContext;
 		int lodLevel = Terrain::getMaxMipLevel(RESOLUTION, TILE_SIZE);
@@ -874,6 +913,172 @@ namespace Fury {
 		glew->texParameteri(0x8C1A, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glew->texParameteri(0x8C1A, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glew->texParameteri(0x8C1A, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	}
+
+	void Terrain::createAlbedoMapTextureArray() {
+
+		std::string albedoTexturePaths[8];
+		std::string normalTexturePaths[8];
+		std::string roughnessTexturePaths[8];
+		std::string aoTexturePaths[8];
+		std::string heightTexturePaths[8];
+
+		//unsigned int width = 512;
+		//unsigned int height = 512;
+		//unsigned int size = width * height * 4;
+
+		unsigned char* albedoMaps = new unsigned char[512 * 512 * 4 * 8];
+		unsigned char* normalMaps = new unsigned char[512 * 512 * 4 * 8];
+		unsigned char* maskMaps = new unsigned char[512 * 512 * 4 * 8];
+
+		albedoTexturePaths[0] = "temp/moss_0_a.png";
+		albedoTexturePaths[1] = "temp/moss_2_a.png";
+		albedoTexturePaths[2] = "temp/mud_wet_a.png";
+		albedoTexturePaths[3] = "temp/mud_cracked_a.png";
+		albedoTexturePaths[4] = "temp/sand_muddy_a.png";
+		albedoTexturePaths[5] = "temp/soil_rocky_a.png";
+		albedoTexturePaths[6] = "temp/cliff_volcanic_a.png";
+		albedoTexturePaths[7] = "temp/cliff_granite_a.png";
+
+		normalTexturePaths[0] = "temp/moss_0_n.png";
+		normalTexturePaths[1] = "temp/moss_2_n.png";
+		normalTexturePaths[2] = "temp/mud_wet_n.png";
+		normalTexturePaths[3] = "temp/mud_cracked_n.png";
+		normalTexturePaths[4] = "temp/sand_muddy_n.png";
+		normalTexturePaths[5] = "temp/soil_rocky_n.png";
+		normalTexturePaths[6] = "temp/cliff_volcanic_n.png";
+		normalTexturePaths[7] = "temp/cliff_granite_n.png";
+
+		roughnessTexturePaths[0] = "temp/moss_0_r.png";
+		roughnessTexturePaths[1] = "temp/moss_2_r.png";
+		roughnessTexturePaths[2] = "temp/mud_wet_r.png";
+		roughnessTexturePaths[3] = "temp/mud_cracked_r.png";
+		roughnessTexturePaths[4] = "temp/sand_muddy_r.png";
+		roughnessTexturePaths[5] = "temp/soil_rocky_r.png";
+		roughnessTexturePaths[6] = "temp/cliff_volcanic_r.png";
+		roughnessTexturePaths[7] = "temp/cliff_granite_r.png";
+
+		aoTexturePaths[0] = "temp/moss_0_ao.png";
+		aoTexturePaths[1] = "temp/moss_2_ao.png";
+		aoTexturePaths[2] = "temp/mud_wet_ao.png";
+		aoTexturePaths[3] = "temp/mud_cracked_ao.png";
+		aoTexturePaths[4] = "temp/sand_muddy_ao.png";
+		aoTexturePaths[5] = "temp/soil_rocky_ao.png";
+		aoTexturePaths[6] = "temp/cliff_volcanic_ao.png";
+		aoTexturePaths[7] = "temp/cliff_granite_ao.png";
+
+		heightTexturePaths[0] = "temp/moss_0_h.png";
+		heightTexturePaths[1] = "temp/moss_2_h.png";
+		heightTexturePaths[2] = "temp/mud_wet_h.png";
+		heightTexturePaths[3] = "temp/mud_cracked_h.png";
+		heightTexturePaths[4] = "temp/sand_muddy_h.png";
+		heightTexturePaths[5] = "temp/soil_rocky_h.png";
+		heightTexturePaths[6] = "temp/cliff_volcanic_h.png";
+		heightTexturePaths[7] = "temp/cliff_granite_h.png";
+
+		for (int i = 0; i < 8; i++) {
+
+			unsigned int width, height;
+			std::vector<unsigned char> out;
+			lodepng::decode(out, width, height, albedoTexturePaths[i], LodePNGColorType::LCT_RGBA, 8);
+			unsigned int size = width * height * 4;
+
+			for (int j = 0; j < out.size(); j++)
+				albedoMaps[size * i + j] = out[j];
+		}
+
+		//for (int i = 0; i < 8; i++) {
+
+		//	for (int j = 0; j < 512 * 512 * 4; j++) {
+
+		//		unsigned char test = albedoMaps[i][j];
+		//		int a = 5;
+		//	}
+		//}
+
+		for (int i = 0; i < 8; i++) {
+
+			unsigned int width, height;
+			std::vector<unsigned char> out;
+			lodepng::decode(out, width, height, normalTexturePaths[i], LodePNGColorType::LCT_RGBA, 8);
+			unsigned int size = width * height * 4;
+
+			for (int j = 0; j < out.size(); j++)
+				normalMaps[size * i + j] = out[j];
+
+			/*unsigned int width, height;
+			std::vector<unsigned char> out;
+			lodepng::decode(out, width, height, normalTexturePaths[i], LodePNGColorType::LCT_RGBA, 8);
+
+			unsigned char* data = new unsigned char[width * height * 4];
+			for (int j = 0; j < out.size(); j++)
+				data[j] = out[j];
+
+			normalMaps[i] = data;*/
+		}
+
+		for (int i = 0; i < 8; i++) {
+
+			unsigned int width, height;
+			std::vector<unsigned char> out_r;
+			lodepng::decode(out_r, width, height, roughnessTexturePaths[i], LodePNGColorType::LCT_RGBA, 8);
+			std::vector<unsigned char> out_ao;
+			lodepng::decode(out_ao, width, height, aoTexturePaths[i], LodePNGColorType::LCT_RGBA, 8);
+			std::vector<unsigned char> out_h;
+			lodepng::decode(out_h, width, height, heightTexturePaths[i], LodePNGColorType::LCT_RGBA, 8);
+
+			unsigned int size = width * height;
+			unsigned int arrSize = width * height * 4;
+
+			for (int j = 0; j < size; j++) {
+				maskMaps[i * arrSize + j * 4] = 0;// metalness;
+				maskMaps[i * arrSize + j * 4 + 1] = out_r[j * 4];
+				maskMaps[i * arrSize + j * 4 + 2] = out_ao[j * 4];
+				maskMaps[i * arrSize + j * 4 + 3] = out_h[j * 4];
+			}
+		}
+
+		unsigned int stride = 512 * 512 * 4;
+
+		glGenTextures(1, &albedoTextureArray);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, albedoTextureArray);
+		glTexStorage3D(GL_TEXTURE_2D_ARRAY, 9, GL_RGBA8, 512, 512, 8);
+		for (int i = 0; i < 8; i++)
+			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, 512, 512, 1, GL_RGBA, GL_UNSIGNED_BYTE, &albedoMaps[i * stride]);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+
+		glGenTextures(1, &normalTextureArray);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, normalTextureArray);
+		glTexStorage3D(GL_TEXTURE_2D_ARRAY, 9, GL_RGBA8, 512, 512, 8);
+		for (int i = 0; i < 8; i++)
+			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, 512, 512, 1, GL_RGBA, GL_UNSIGNED_BYTE, &normalMaps[i * stride]);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+
+		glGenTextures(1, &maskTextureArray);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, maskTextureArray);
+		glTexStorage3D(GL_TEXTURE_2D_ARRAY, 9, GL_RGBA8, 512, 512, 8);
+		for (int i = 0; i < 8; i++)
+			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, 512, 512, 1, GL_RGBA, GL_UNSIGNED_BYTE, &maskMaps[i * stride]);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+
+		delete[] albedoMaps;
+		delete[] normalMaps;
+		delete[] maskMaps;
 	}
 
 	void Terrain::writeHeightDataToGPUBuffer(glm::ivec2 index, int texWidth, unsigned char* heightMap, unsigned char* chunk, int level, glm::ivec2 toroidalUpdateBorder) {

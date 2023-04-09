@@ -55,7 +55,7 @@ namespace Fury {
 			}
 
 			if (currentScene->primaryCamera)
-				currentScene->primaryCamera->resetResolution(Core::instance->renderer->width, Core::instance->renderer->height);
+				currentScene->primaryCamera->resetResolution(); //Core::instance->renderer->width, Core::instance->renderer->height
 		}
 		else {
 
@@ -69,6 +69,16 @@ namespace Fury {
 		auto nodeHandler = sceneFiles.extract(oldSceneName);
 		nodeHandler.key() = sceneName;
 		sceneFiles.insert(std::move(nodeHandler));
+	}
+
+	void SceneManager::renameScene(std::string oldSceneName, std::string newSceneName) {
+
+		auto nodeHandler = sceneFiles.extract(oldSceneName);
+		nodeHandler.key() = newSceneName;
+		sceneFiles.insert(std::move(nodeHandler));
+
+		if (currentScene && currentScene->name == oldSceneName)
+			currentScene->name = newSceneName;
 	}
 
 	File* SceneManager::getActiveSceneFile() {

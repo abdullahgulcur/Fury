@@ -3,12 +3,22 @@
 
 namespace Fury {
 
-	Component::Component() {
+	Component::Component(Entity* entity) {
+
+		this->entity = entity;
+	}
+
+	Component::~Component() {
 
 
 	}
 
-	Component::~Component() {
+	void Component::start() {
+
+
+	}
+
+	void Component::update(float dt) {
 
 
 	}

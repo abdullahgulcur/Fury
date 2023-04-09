@@ -833,63 +833,27 @@ namespace Fury {
 			break;
 		}
 		case FileType::obj: {
-			//---------- destructor a konulabilir mi?
-			/*std::vector<MeshRenderer*>& components = fileToMeshRendererComponents[file];
-			for (auto& comp : components)
-				comp->meshFile = NULL;
-			fileToMeshRendererComponents.erase(file);*/
-			//----------
 
-			/*meshFiles.erase(std::remove(meshFiles.begin(), meshFiles.end(), file), meshFiles.end());
-			MeshFile* meshFile = fileToMeshFile[file];
-			fileToMeshFile.erase(file);
-			meshFileToFile.erase(meshFile);*/
 			MeshFile* meshFile = fileToMeshFile[file];
 			delete meshFile;
 			break;
 		}
 		case FileType::mat: {
-			//----------
-			//std::vector<MeshRenderer*>& components = fileToMeshRendererComponents[file];
-			//for (auto& comp : components)
-			//	comp->materialFile = NULL;// pbrMaterialNoTexture;
-			//fileToMeshRendererComponents.erase(file);
-			//----------
 
-			//matFiles.erase(std::remove(matFiles.begin(), matFiles.end(), file), matFiles.end());
 			MaterialFile* matFile = fileToMatFile[file];
-
-		//	if (matFile) {
-			//fileToMatFile.erase(file);
-			//matFileToFile.erase(matFile);
 			delete matFile;
-		//	}
 			break;
 		}
 		case FileType::png: {
-			//----------
-			//std::vector<MaterialFile*>& matFiles = fileToMaterials[file];
-			//for (auto& matFile : matFiles)
-			//	matFile->findTexFileAndRelease(file);
-			//fileToMaterials.erase(file);
-			//----------
 
-			// destructorrr
-			//textureFiles.erase(std::remove(textureFiles.begin(), textureFiles.end(), file), textureFiles.end());
 			TextureFile* texFile = fileToTexFile[file];
-			//fileToTexFile.erase(file);
-			//texFileToFile.erase(texFile);
 			delete texFile;
 			break;
 		}
 		case FileType::scene: {
-			//sceneFiles.erase(std::remove(sceneFiles.begin(), sceneFiles.end(), file), sceneFiles.end());
-			SceneFile* sceneFile = fileToSceneFile[file];
-			//fileToSceneFile.erase(file);
-			//sceneFileToFile.erase(sceneFile);
-			delete sceneFile;
-			Core::instance->sceneManager->sceneFiles.erase(file->name);
 
+			SceneFile* sceneFile = fileToSceneFile[file];
+			delete sceneFile;
 			break;
 		}
 		}
@@ -1329,6 +1293,7 @@ namespace Fury {
 			return;
 
 		std::string oldPath = file->path;
+		std::string oldName = file->name;
 		filePathToId.erase(oldPath);
 		file->name = FileSystem::getAvailableFileName(file->parent, newName);
 		file->path = file->parent->path + "\\" + file->name + file->extension;
@@ -1348,18 +1313,9 @@ namespace Fury {
 			SceneFile* sceneFile = fileToSceneFile[file];
 			sceneFile->renameFile(file->path, file->name);
 
-			if(Core::instance->sceneManager->currentScene)
-				Core::instance->sceneManager->renameCurrentScene(file->name);
-
+			Core::instance->sceneManager->renameScene(oldName, file->name);
 			Core::instance->sceneManager->saveSceneManagerFile();
 		}
-
-		//FileSystem::changeAssetsKeyManually(id, oldPath, files[id].path);
-
-		/*if (files[id].type == FileType::material)
-			writeMaterialFile(files[id].path, materials[files[id].path]);
-		else if (files[id].type == FileType::physicmaterial)
-			writePhysicMaterialFile(files[id].path, physicmaterials[files[id].path]);*/
 
 	}
 

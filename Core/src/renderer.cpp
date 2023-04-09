@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "renderer.h"
+#include "component/terrain.h"
+#include "component/particlesystem.h"
 #include "scene.h"
 #include "core.h"
 #include "entity.h"
@@ -14,8 +16,8 @@ namespace Fury {
 
     void Renderer::init() {
 
-        width = Core::instance->glfwContext->mode->width;
-        height = Core::instance->glfwContext->mode->height;
+       // width = Core::instance->glfwContext->mode->width;
+       // height = Core::instance->glfwContext->mode->height;
 
         GlewContext* glew = Core::instance->glewContext;
 
@@ -23,6 +25,9 @@ namespace Fury {
 
         framebufferProgramID = Core::instance->glewContext->loadShaders("C:/Projects/Fury/Core/src/shader/framebuffer.vert",
             "C:/Projects/Fury/Core/src/shader/framebuffer.frag");
+
+        pickingProgramID = Core::instance->glewContext->loadShaders("C:/Projects/Fury/Editor/src/shader/ObjectPick.vert",
+            "C:/Projects/Fury/Editor/src/shader/ObjectPick.frag");
 
         float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
             // positions   // texCoords
@@ -47,7 +52,7 @@ namespace Fury {
         glew->vertexAttribPointer(1, 2, 0x1406, 0, 4 * sizeof(float), (void*)(2 * sizeof(float)));
     }
 
-    void Renderer::update() {
+    void Renderer::update(float dt) {
 
         /* reset */
         drawCallCount = 0;
@@ -57,27 +62,16 @@ namespace Fury {
         if (!scene)
             return;
 
-        GameCamera* camera = scene->primaryCamera;
-
-        if (!camera)
-            return;
-
-        PBRMaterial* pbrMaterial = Core::instance->fileSystem->pbrMaterial;
         GlewContext* glew = Core::instance->glewContext;
+        GlobalVolume* globalVolume = Core::instance->fileSystem->globalVolume;
 
-	    glm::mat4& VP = camera->projectionViewMatrix;
-        glm::vec3& camPos = camera->position;
+	    glew->bindFrameBuffer(cameraInfo.FBO); //camera->FBO
+        glew->enable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
+        glew->depthFunc(GL_LEQUAL); // set depth function to less than AND equal for skybox depth trick.
 
-	    Core::instance->glewContext->bindFrameBuffer(camera->FBO);
-        Core::instance->glewContext->enable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
-	    Core::instance->glewContext->viewport(camera->width, camera->height);
-	    Core::instance->glewContext->clearScreen(glm::vec3(0.3f, 0.3f, 0.3f));
-
-	    //for (int i = 0; i < Core::instance->sceneManager->currentScene->root->transform->children.size(); i++)
-		    // Renderer::drawMeshRendererRecursively(Core::instance->sceneManager->currentScene->root->transform->children[i]->entity,
-			    //  Core::instance->sceneManager->currentScene->primaryCamera->projectionViewMatrix, Core::instance->sceneManager->currentScene->primaryCamera->position);
-
-           
+        glew->enable(GL_TEXTURE_CUBE_MAP_SEAMLESS); // enable depth testing (is disabled for rendering screen-space quad)
+	    glew->viewport(cameraInfo.width, cameraInfo.height); //camera->width, camera->height
+	    glew->clearScreen(glm::vec3(0.3f, 0.3f, 0.3f));
 
         std::stack<Entity*> entStack;
         entStack.push(Core::instance->sceneManager->currentScene->root);
@@ -90,53 +84,34 @@ namespace Fury {
             for (Transform*& child : popped->transform->children)
                 entStack.push(child->entity);
 
-            MeshRenderer* renderer = popped->getComponent<MeshRenderer>();
-            if (!renderer)
-                continue;
+            Terrain* terrain = popped->getComponent<Terrain>();
+            if (terrain != NULL && scene->primaryCamera != NULL) {
 
-            MeshFile* mesh = renderer->meshFile;
-            MaterialFile* mat = renderer->materialFile;
-            if(!mesh || !mat)
-                continue;
-
-            glm::mat4 model = popped->transform->model;
-            glm::vec4 startInWorldSpace = model * mesh->aabbBox.start;
-            glm::vec4 endInWorldSpace = model * mesh->aabbBox.end;
-
-            if (!camera->intersectsAABB(startInWorldSpace, endInWorldSpace))
-                continue;
-
-            switch (mat->shaderType) {
-
-            case ShaderType::PBR: {
-                
-                unsigned int pbrShaderProgramId = pbrMaterial->pbrShaderProgramId_old;
-                glew->useProgram(pbrShaderProgramId);
-                glew->uniform3fv(glew->getUniformLocation(pbrShaderProgramId, "camPos"), 1, &camPos[0]);
-                glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "PV"), 1, 0, &VP[0][0]);
-                glew->uniformMatrix4fv(glew->getUniformLocation(pbrShaderProgramId, "model"), 1, 0, &model[0][0]);
-
-                for (int i = 0; i < mat->textureFiles.size(); i++) {
-
-                    std::string texStr = "texture" + std::to_string(i);
-                    glew->activeTexture(0x84C0 + i);
-                    glew->bindTexture(0x0DE1, mat->textureFiles[i]->textureId);
-                    glew->uniform1i(glew->getUniformLocation(pbrShaderProgramId, &texStr[0]), i);
-                }
-
-                glew->bindVertexArray(mesh->VAO);
-                glew->drawElements(0x0004, mesh->indiceCount, 0x1405, (void*)0);
-                glew->bindVertexArray(0);
-
-                break;
+                //glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                terrain->onDraw(cameraInfo.VP, cameraInfo.camPos);
             }
-            case ShaderType::PBR_ALPHA: {
-                break;
-            }
-            }
+
+            if (ParticleSystem* particleSystem = popped->getComponent<ParticleSystem>())
+                particleSystem->onDraw(cameraInfo.VP, cameraInfo.camPos);
+
+            if (MeshRenderer* renderer = popped->getComponent<MeshRenderer>())
+                renderer->update(dt);
 
             drawCallCount++;
         }
+
+
+        // render skybox (render as last to prevent overdraw)
+
+        unsigned int backgroundShaderProgramId = globalVolume->backgroundShaderProgramId;
+        glew->useProgram(backgroundShaderProgramId);
+        glew->uniformMatrix4fv(glew->getUniformLocation(backgroundShaderProgramId, "projection"), 1, GL_FALSE, &cameraInfo.projection[0][0]);
+        glew->uniformMatrix4fv(glew->getUniformLocation(backgroundShaderProgramId, "view"), 1, GL_FALSE, &cameraInfo.view[0][0]);
+        glew->activeTexture(GL_TEXTURE0);
+        glew->bindTexture(GL_TEXTURE_CUBE_MAP, globalVolume->envCubemap);
+        glDisable(GL_CULL_FACE);
+        globalVolume->renderCube();
+        glEnable(GL_CULL_FACE);
 
 	    Core::instance->glewContext->bindFrameBuffer(0);
 
@@ -199,6 +174,108 @@ namespace Fury {
     //    for (auto& transform : entity->transform->children)
     //        Renderer::drawMeshRendererRecursively(transform->entity, PV, camPos);
     //}
+
+
+    Entity* Renderer::detectAndGetEntityId(float mouseX, float mouseY, unsigned int FBO, unsigned int width, unsigned int height, glm::mat4& PV, glm::vec3& camPos, glm::vec4 planes[6]) {
+
+        Scene* scene = Core::instance->sceneManager->currentScene;
+        if (!scene)
+            return NULL;
+
+        GlewContext* glew = Core::instance->glewContext;
+
+        glew->bindFrameBuffer(0x8D40, FBO); // Editor::instance->sceneCamera->FBO
+        glew->viewport(0, 0, width, height); //(int)Editor::instance->menu->sceneRegion.x, (int)Editor::instance->menu->sceneRegion.y
+        glew->clearColor(0.3f, 0.3f, 0.3f, 1.0f);
+        glew->clear(0x00004000 | 0x00000100);
+        glew->useProgram(pickingProgramID);
+
+        //SceneCamera* camera = Editor::instance->sceneCamera;
+        //glm::mat4& PV = camera->projectionViewMatrix;
+        //glm::vec3& camPos = camera->position;
+
+        std::stack<Entity*> entStack;
+        entStack.push(Core::instance->sceneManager->currentScene->root);
+
+        while (!entStack.empty()) {
+
+            Entity* popped = entStack.top();
+            entStack.pop();
+
+            for (Transform*& child : popped->transform->children)
+                entStack.push(child->entity);
+
+            MeshRenderer* renderer = popped->getComponent<MeshRenderer>();
+            if (!renderer)
+                continue;
+
+            MeshFile* mesh = renderer->meshFile;
+            MaterialFile* mat = renderer->materialFile;
+            if (!mesh || !mat)
+                continue;
+
+            glm::mat4 model = popped->transform->model;
+            glm::vec4 startInWorldSpace = model * mesh->aabbBox.start;
+            glm::vec4 endInWorldSpace = model * mesh->aabbBox.end;
+
+            //if (!camera->intersectsAABB(startInWorldSpace, endInWorldSpace))
+           //     continue;
+
+            glew->uniformMatrix4fv(glew->getUniformLocation(pickingProgramID, "PV"), 1, 0, &PV[0][0]);
+            glew->uniformMatrix4fv(glew->getUniformLocation(pickingProgramID, "model"), 1, 0, &model[0][0]);
+
+            int r = (popped->id & 0x000000FF) >> 0;
+            int g = (popped->id & 0x0000FF00) >> 8;
+            int b = (popped->id & 0x00FF0000) >> 16;
+
+            glew->uniform4f(glew->getUniformLocation(pickingProgramID, "pickingColor"), r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+
+            glew->bindVertexArray(renderer->meshFile->VAO);
+            glew->drawElements(0x0004, renderer->meshFile->indiceCount, 0x1405, (void*)0);
+            glew->bindVertexArray(0);
+        }
+
+        /*for (int i = 0; i < Core::instance->sceneManager->currentScene->root->transform->children.size(); i++)
+            Renderer::drawMeshRendererForPickingRecursively(Core::instance->sceneManager->currentScene->root->transform->children[i]->entity);*/
+
+            // Wait until all the pending drawing commands are really done.
+            // Ultra-mega-over slow ! 
+            // There are usually a long time between glDrawElements() and
+            // all the fragments completely rasterized.
+        glew->flush();
+        glew->finish();
+
+        glew->pixelStorei(0x0CF5, 1);
+
+        // Read the pixel at the center of the screen.
+        // You can also use glfwGetMousePos().
+        // Ultra-mega-over slow too, even for 1 pixel, 
+        // because the framebuffer is on the GPU.
+        unsigned char data[4];
+        glew->readPixels(mouseX, mouseY, 1, 1, 0x1908, 0x1401, data);
+
+        // Convert the color back to an integer ID
+        int pickedID =
+            data[0] +
+            data[1] * 256 +
+            data[2] * 256 * 256;
+
+        //if (pickedID == 0x00ffffff || pickedID >= Editor::instance->scene->entities.size())
+        //	Editor::instance->editorGUI.lastSelectedEntity = NULL;
+        //else
+        //	Editor::instance->editorGUI.lastSelectedEntity = Editor::instance->scene->entities[pickedID];
+
+        glew->bindFrameBuffer(0x8D40, 0);
+
+        if (Core::instance->sceneManager->currentScene->entityIdToEntity.find(pickedID) != Core::instance->sceneManager->currentScene->entityIdToEntity.end()) {
+            return Core::instance->sceneManager->currentScene->entityIdToEntity[pickedID];
+        }
+        return NULL;
+
+        //if (pickedID == 0x00ffffff || pickedID > Core::instance->scene->idCounter)
+        //else
+        //	return pickedID;
+    }
 
     void Renderer::initDefaultSphere() {
 

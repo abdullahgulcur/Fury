@@ -23,7 +23,7 @@ namespace Fury {
 		static std::vector<std::string> dragAndDropFiles;
 
 		GlfwContext();
-		void update();
+		void update(float dt);
 		void loadTitleBarIcon();
 		void end();
 		void handleCallBacks();

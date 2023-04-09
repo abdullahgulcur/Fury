@@ -41,9 +41,32 @@ namespace Fury {
 
 	void Core::update(float dt) {
 
-		fileSystem->onUpdate();
-		glfwContext->update();
-		renderer->update();
+		fileSystem->onUpdate(); // todo: sadece editor modunda calismali
+		glfwContext->update(dt); // todo: sadece editor modunda calismali
+
+		if (!sceneManager->currentScene)
+			return;
+
+		if (!sceneManager->currentScene->primaryCamera)
+			return;
+
+		sceneManager->currentScene->update(dt);
+
+		// RENDERING SECTION
+		GameCamera* camera = sceneManager->currentScene->primaryCamera;
+		CameraInfo cameraInfo;
+		cameraInfo.FBO = camera->FBO;
+		cameraInfo.VP = camera->projectionViewMatrix;
+		cameraInfo.projection = camera->projectionMatrix;
+		cameraInfo.view = camera->viewMatrix;
+		cameraInfo.camPos = camera->position;
+		cameraInfo.width = camera->width;
+		cameraInfo.height = camera->height;
+		for(int i = 0; i < 6; i++)
+			cameraInfo.planes[i] = camera->planes[i];
+
+		Core::instance->renderer->cameraInfo = cameraInfo;
+		renderer->update(dt);
 	}
 
 	float Core::getCurrentTime() {

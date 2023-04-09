@@ -15,6 +15,7 @@ namespace Fury {
 		FileSystem* fileSystem = Core::instance->fileSystem;
 		File* file = fileSystem->sceneFileToFile[this];
 
+		Core::instance->sceneManager->sceneFiles.erase(file->name);
 		fileSystem->sceneFiles.erase(std::remove(fileSystem->sceneFiles.begin(), fileSystem->sceneFiles.end(), file), fileSystem->sceneFiles.end());
 		fileSystem->fileToSceneFile.erase(file);
 		fileSystem->sceneFileToFile.erase(this);
@@ -300,8 +301,8 @@ namespace Fury {
 		camNode->append_attribute(doc.allocate_attribute("Near", doc.allocate_string(std::to_string(camera->nearClip).c_str())));
 		camNode->append_attribute(doc.allocate_attribute("Far", doc.allocate_string(std::to_string(camera->farClip).c_str())));
 		camNode->append_attribute(doc.allocate_attribute("FOV", doc.allocate_string(std::to_string(camera->fov).c_str())));
-		//camNode->append_attribute(doc.allocate_attribute("Width", doc.allocate_string(std::to_string(camera->width).c_str())));
-		//camNode->append_attribute(doc.allocate_attribute("Height", doc.allocate_string(std::to_string(camera->height).c_str())));
+		camNode->append_attribute(doc.allocate_attribute("Width", doc.allocate_string(std::to_string(camera->width).c_str())));
+		camNode->append_attribute(doc.allocate_attribute("Height", doc.allocate_string(std::to_string(camera->height).c_str())));
 		entNode->append_node(camNode);
 
 		return true;
@@ -320,15 +321,16 @@ namespace Fury {
 		cameraComp->nearClip = atof(cameraNode->first_attribute("Near")->value());
 		cameraComp->farClip = atof(cameraNode->first_attribute("Far")->value());
 		cameraComp->fov = atof(cameraNode->first_attribute("FOV")->value());
-	//	int x = atoi(cameraNode->first_attribute("Width")->value());
-	//	int y = atoi(cameraNode->first_attribute("Height")->value());
+		cameraComp->width = atoi(cameraNode->first_attribute("Width")->value());
+		cameraComp->height = atoi(cameraNode->first_attribute("Height")->value());
 		Core::instance->sceneManager->currentScene->primaryCamera = cameraComp;
-		//cameraComp->setMatrices(ent->transform);
 
 #ifdef EDITOR_MODE
-		cameraComp->init(ent->transform, 1024, 768); // burasi degisecek, editor icin calisiyor sadece. game tarafi ? henuz netlik yok...
+		cameraComp->init(ent->transform); // burasi degisecek, editor icin calisiyor sadece. game tarafi ? henuz netlik yok... , 1024, 768
 #else
-		cameraComp->init(ent->transform, Core::instance->glfwContext->mode->width, Core::instance->glfwContext->mode->height);
+		cameraComp->width = Core::instance->glfwContext->mode->width;
+		cameraComp->height = Core::instance->glfwContext->mode->height;
+		cameraComp->init(ent->transform);
 #endif
 
 		return true;
@@ -353,10 +355,10 @@ namespace Fury {
 			return false;
 
 		Terrain* terrainComp = ent->addComponent<Terrain>();
-		terrainComp->clipmapResolution = 120;// atoi(cameraNode->first_attribute("ClipmapResolution")->value());
+		//terrainComp->clipmapResolution = 120;// atoi(cameraNode->first_attribute("ClipmapResolution")->value());
 		//terrainComp->clipmapLevel = 4;// atoi(cameraNode->first_attribute("ClipmapLevel")->value());
 		//terrainComp->triangleSize = atof(cameraNode->first_attribute("TriangleSize")->value());
-		terrainComp->init();
+		terrainComp->start();
 		return true;
 	}
 
@@ -382,7 +384,7 @@ namespace Fury {
 		//particleSystemComp->clipmapResolution = 120;// atoi(cameraNode->first_attribute("ClipmapResolution")->value());
 		////terrainComp->clipmapLevel = 4;// atoi(cameraNode->first_attribute("ClipmapLevel")->value());
 		////terrainComp->triangleSize = atof(cameraNode->first_attribute("TriangleSize")->value());
-		particleSystemComp->init();
+		particleSystemComp->start();
 		return true;
 	}
 }

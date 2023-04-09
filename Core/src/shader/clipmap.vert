@@ -7,30 +7,106 @@
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 position_instance;
-layout (location = 2) in float level_instance;
-layout (location = 3) in mat4 model_instance;
+layout (location = 2) in vec2 clipmapcenter_instance;
+layout (location = 3) in float level_instance;
+layout (location = 4) in mat4 model_instance;
 
 uniform mat4 PV;
 
 out vec3 WorldPos;
+out vec3 Normal;
 out vec2 TexCoords;
+out mat3 TBN;
+out vec3 TangentViewPos;
+out vec3 TangentFragPos;
 
 uniform sampler2DArray heightmapArray;
 uniform float texSize;
+uniform vec3 camPoss;
+uniform vec3 camPos;
 
 void main(void)
 {
     vec3 p = vec3(model_instance * vec4(aPos, 1));
     float scale = pow(2, float(level_instance));
     vec3 pos = vec3(position_instance.x, 0, position_instance.y) + scale * p;
+    WorldPos = pos;
 
     float terrainClipSize = scale * texSize;
     vec2 texCoords = mod(vec2(pos.x, pos.z), terrainClipSize);
+    vec2 texCoords_ = mod(vec2(pos.x, pos.z), terrainClipSize * 2);
     texCoords /= terrainClipSize;
+    texCoords_ /= terrainClipSize * 2;
     vec2 heightSample = texture(heightmapArray, vec3(texCoords.xy, level_instance)).rg;
+    vec2 heightSample_ = texture(heightmapArray, vec3(texCoords_.xy, level_instance + 1)).rg;
 
-    pos.y = heightSample.r * 65.536f + heightSample.g * 0.256f;
-    pos.y *= 5;
+    //pos.y = heightSample.r * 65.536f + heightSample.g * 0.256f;
+    //pos.y *= 5;
+
+    float factor = 10;
+    float halfDist = (120 * 2 - 10) * scale;
+    vec2 dist;
+    dist.x = abs(pos.x - camPoss.x);
+    dist.y = abs(pos.z - camPoss.z);
+    vec2 ratio = dist / halfDist;
+    vec2 num = ratio * factor;
+    num = factor - num;
+    num.x = clamp(num.x, 0.f, 1.f);
+    num.y = clamp(num.y, 0.f, 1.f);
+    float val = min(num.x, num.y);
+
+    vec2 index0 = textureOffset(heightmapArray, vec3(texCoords.xy, level_instance), ivec2(0, -1)).rg;
+    vec2 index1 = textureOffset(heightmapArray, vec3(texCoords.xy, level_instance), ivec2(-1, 0)).rg;
+    vec2 index2 = textureOffset(heightmapArray, vec3(texCoords.xy, level_instance), ivec2(1, 0)).rg;
+    vec2 index3 = textureOffset(heightmapArray, vec3(texCoords.xy, level_instance), ivec2(0, 1)).rg;
+
+    vec2 index0_ = textureOffset(heightmapArray, vec3(texCoords_.xy, level_instance + 1), ivec2(0, -1)).rg;
+    vec2 index1_ = textureOffset(heightmapArray, vec3(texCoords_.xy, level_instance + 1), ivec2(-1, 0)).rg;
+    vec2 index2_ = textureOffset(heightmapArray, vec3(texCoords_.xy, level_instance + 1), ivec2(1, 0)).rg;
+    vec2 index3_ = textureOffset(heightmapArray, vec3(texCoords_.xy, level_instance + 1), ivec2(0, 1)).rg;
+
+    float h0_ = index0_.r * 65.536f + index0_.g * 0.256f;
+    float h1_ = index1_.r * 65.536f + index1_.g * 0.256f;
+    float h2_ = index2_.r * 65.536f + index2_.g * 0.256f;
+    float h3_ = index3_.r * 65.536f + index3_.g * 0.256f;
+
+    float h0 = index0.r * 65.536f + index0.g * 0.256f;
+    float h1 = index1.r * 65.536f + index1.g * 0.256f;
+    float h2 = index2.r * 65.536f + index2.g * 0.256f;
+    float h3 = index3.r * 65.536f + index3.g * 0.256f;
+
+    vec3 normal;
+	normal.z = (h0 - h3) * 5;
+	normal.x = (h1 - h2) * 5;
+	normal.y = (2) * 5;
+	normal = normalize(normal);
+
+    vec3 normal_;
+	normal_.z = (h0_ - h3_) * 5;
+	normal_.x = (h1_ - h2_) * 5;
+	normal_.y = (2) * 5;
+	normal_ = normalize(normal_);
+
+    vec3 T = normalize(vec3(2 * 5, (h1 - h2) * 5, 0));
+    vec3 B = normalize(vec3(0, (h0 - h3) * 5, 2 * 5));
+    TBN = transpose(mat3(T, B, normal));
+    TangentViewPos = TBN * camPos;
+    TangentFragPos = TBN * WorldPos;
+
+    float height = (heightSample.r * 65.536f + heightSample.g * 0.256f) * 5;
+    float height_ = (heightSample_.r * 65.536f + heightSample_.g * 0.256f) * 5;
+
+    pos.y = val * height + (1 - val) * height_;
+    vec3 nrml = val * normal + (1 - val) * normal_;
+    Normal = normalize(nrml);
+
+    TexCoords.x = WorldPos.x;
+    TexCoords.y = WorldPos.z;
+//    pos.y = val * 15;
+//    Normal = vec3(0,1,0);
+
+    //Normal = normal_;
+    //pos.y = height_;
 
     gl_Position =  PV * vec4(pos, 1.0);
 }

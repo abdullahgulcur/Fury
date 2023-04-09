@@ -4,6 +4,7 @@
 #include "glfwcontext.h"
 #include "filesystem.h"
 #include "scenemanager.h"
+#include "scene.h"
 #include "saveloadsystem.h"
 #include "renderer.h"
 #include "input.h"

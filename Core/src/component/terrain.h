@@ -26,6 +26,7 @@ namespace Fury {
 	struct TerrainVertexAttribs {
 
 		glm::vec2 position;
+		glm::vec2 clipmapcenter;
 		float level;
 		glm::mat4 model;
 	};
@@ -49,12 +50,19 @@ namespace Fury {
 		AABB_Box* blockAABBs;
 		//AABB_Box* ringfixupAABBs;
 
-		unsigned short clipmapResolution = 16;
+		unsigned short clipmapResolution = 120;
 		//unsigned short clipmapLevel = 4;
 		//float triangleSize = 1.f;
 
 		unsigned int programID;
 		unsigned int elevationMapTexture;
+
+		unsigned int albedoTextureArray;
+		unsigned int normalTextureArray;
+		unsigned int maskTextureArray;
+		//unsigned int roughnessTextureArray;
+		//unsigned int aoTextureArray;
+		//unsigned int heightTextureArray;
 
 		std::vector<unsigned int> blockIndices;
 		unsigned int blockVAO;
@@ -73,11 +81,13 @@ namespace Fury {
 
 		unsigned char** heights;
 		unsigned char** mipStack;
+
+		float displacementMapScale = 1.5f;
 		
-		Terrain();
+		Terrain(Entity* entity);
 		~Terrain();
-		void init();
-		void update();
+		void start();
+		void update(float dt);
 		void onDraw(glm::mat4& pv, glm::vec3& pos);
 		void drawElementsInstanced(GlewContext* glew, int size, unsigned int VAO, std::vector<TerrainVertexAttribs>& instanceArray, unsigned int indiceCount);
 		void calculateBlockPositions(glm::vec3 camPosition, int level);
@@ -91,7 +101,7 @@ namespace Fury {
 		void loadFromDiscAndWriteGPUBufferAsync(int level, int texWidth, glm::ivec2 tileStart, glm::ivec2 border, unsigned char* heightData, glm::ivec2 toroidalUpdateBorder);
 		void updateHeightMapTextureArrayPartial(int level, glm::ivec2 size, glm::ivec2 position, unsigned char* heights);
 		void deleteHeightmapArray(unsigned char** heightmapArray);
-		void createHeightMapTextureArray(unsigned char** heightmapArray);
+		void createElevationMapTextureArray(unsigned char** heightmapArray);
 		void writeHeightDataToGPUBuffer(glm::ivec2 index, int texWidth, unsigned char* heightMap, unsigned char* chunk, int level, glm::ivec2 toroidalUpdateBorder);
 		unsigned char* loadTerrainChunkFromDisc(int level, glm::ivec2 index);
 		void updateHeightsWithTerrainChunk(unsigned char* heights, unsigned char* chunk, glm::ivec2 pos, glm::ivec2 chunkSize, glm::ivec2 heightsSize);
@@ -101,5 +111,11 @@ namespace Fury {
 		unsigned char** createMipmaps(unsigned char* heights, int size);
 		void createHeightmapImageFile(unsigned char* heights, int level, int newTileSize, int baseTileSize, int ind_x, int ind_z);
 		void divideTerrainHeightmaps(unsigned char** heightMapList, int width);
+
+		void createAlbedoMapTextureArray();
+		void createNormalMapTextureArray();
+		void createRoughnessMapTextureArray();
+		void createAOMapTextureArray();
+		void createHeightMapTextureArray();
 	};
 }

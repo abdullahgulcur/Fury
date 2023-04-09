@@ -27,8 +27,8 @@ namespace Fury {
 #ifdef EDITOR_MODE
 		GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", NULL, NULL);
 #else
-		GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", NULL, NULL); // windowed
-		//GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", monitor, NULL); // fullscreen
+		//GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", NULL, NULL); // windowed
+		GLFW_window = glfwCreateWindow(mode->width, mode->height, "Fury", monitor, NULL); // fullscreen
 #endif // EDITOR_MODE
 
 
@@ -61,7 +61,7 @@ namespace Fury {
 		glfwSetWindowIcon(GLFW_window, 1, &image);
 	}
 
-	void GlfwContext::update() {
+	void GlfwContext::update(float dt) {
 
 		GlfwContext::handleCallBacks();
 		//on end...

@@ -16,13 +16,15 @@ namespace Fury {
 		unsigned int idCounter = 0;
 		std::string name;
 		Entity* root;
-		Entity* rootBackup;
+		//Entity* rootBackup;
 		std::map<unsigned int, Entity*> entityIdToEntity;
 		GameCamera* primaryCamera = NULL;
 
 		Scene();
 		Scene(std::string name);
 		~Scene();
+		void start();
+		void update(float dt);
 		Entity* newEntity(std::string name);
 		Entity* newEntity(std::string name, Entity* parent);
 		Entity* newEntity(Entity* entity, Entity* parent);

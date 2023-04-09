@@ -54,6 +54,14 @@ namespace Fury {
 	Transform::~Transform() {
 	}
 
+	void Transform::start() {
+
+	}
+
+	void Transform::update(float dt) {
+
+	}
+
 	// done with transform component panel
 	void Transform::updateTransform() {
 

@@ -1,17 +1,18 @@
 #include "pch.h"
 #include "particlesystem.h"
 #include "core.h"
+#include "entity.h"
 #include "glewcontext.h"
 
 namespace Fury {
 
-	ParticleSystem::ParticleSystem() {
+	ParticleSystem::ParticleSystem(Entity* entity) : Component(entity) {
 	}
 
 	ParticleSystem::~ParticleSystem() {
 	}
 
-	void ParticleSystem::init() {
+	void ParticleSystem::start() {
 
 		ParticleSystem::initBillboardVAO();
 
@@ -19,7 +20,7 @@ namespace Fury {
 		shaderProgramId = glew->loadShaders("C:/Projects/Fury/Core/src/shader/particle.vert", "C:/Projects/Fury/Core/src/shader/particle.frag");
 	}
 
-	void ParticleSystem::onUpdate(float dt) {
+	void ParticleSystem::update(float dt) {
 
 	}
 

@@ -422,11 +422,18 @@ namespace Editor {
 			float mX = mousePos.x < scenePos.x || mousePos.x > scenePos.x + sceneRegion.x ? 0 : mousePos.x - scenePos.x;
 			float mY = mousePos.y < scenePos.y || mousePos.y > scenePos.y + sceneRegion.y ? 0 : mousePos.y - scenePos.y;
 
-			if (mX != 0 && mY != 0)
-				sceneClickEntity = Editor::instance->renderer->detectAndGetEntityId(mX, sceneRegion.y - mY);
+			if (mX != 0 && mY != 0) {
+				SceneCamera* camera = Editor::instance->sceneCamera;
+				sceneClickEntity = Core::instance->renderer->detectAndGetEntityId(mX, sceneRegion.y - mY, camera->FBO, sceneRegion.x, sceneRegion.y, 
+					camera->projectionViewMatrix, camera->position, camera->planes);
+			}
+				//sceneClickEntity = Editor::instance->renderer->detectAndGetEntityId(mX, sceneRegion.y - mY);
 		}
 
 		if (content.x != sceneRegion.x || content.y != sceneRegion.y) {
+
+			Editor::instance->sceneCamera->width = content.x;
+			Editor::instance->sceneCamera->height = content.y;
 
 			Editor::instance->sceneCamera->aspectRatio = content.x / content.y;
 			sceneRegion = content;
@@ -470,12 +477,23 @@ namespace Editor {
 
 		if (content.x != gameRegion.x || content.y != gameRegion.y) {
 
-			Core::instance->renderer->width = content.x;
-			Core::instance->renderer->height = content.y;
 			gameRegion = content;
 
-			if(Core::instance->sceneManager->currentScene && Core::instance->sceneManager->currentScene->primaryCamera)
-				Core::instance->sceneManager->currentScene->primaryCamera->resetResolution(content.x, content.y);
+			if (!Core::instance->sceneManager->currentScene) {
+				ImGui::PopStyleVar();
+				ImGui::End();
+				return;
+			}
+
+			if (!Core::instance->sceneManager->currentScene->primaryCamera) {
+				ImGui::PopStyleVar();
+				ImGui::End();
+				return;
+			}
+
+			Core::instance->sceneManager->currentScene->primaryCamera->width = content.x;
+			Core::instance->sceneManager->currentScene->primaryCamera->height = content.y;
+			Core::instance->sceneManager->currentScene->primaryCamera->resetResolution();
 		}
 
 		ImGui::PopStyleVar();
@@ -1694,6 +1712,9 @@ namespace Editor {
 			if (GameCamera* gameCameraComp = selectedEntity->getComponent<GameCamera>())
 				Menu::showGameCameraComponent(gameCameraComp, index++);
 
+			if (ParticleSystem* particleSystemComp = selectedEntity->getComponent<ParticleSystem>())
+				Menu::showParticleSystemComponent(particleSystemComp, index++);
+
 			ImGui::PopStyleColor(); // for the separator
 
 			Menu::addComponentButton();
@@ -1766,7 +1787,9 @@ namespace Editor {
 
 					gameCamComp = selectedEntity->addComponent<GameCamera>();
 					Core::instance->sceneManager->currentScene->primaryCamera = gameCamComp;
-					gameCamComp->init(selectedEntity->transform, gameRegion.x, gameRegion.y);
+					gameCamComp->width = gameRegion.x;
+					gameCamComp->height = gameRegion.y;
+					gameCamComp->init(selectedEntity->transform);//, gameRegion.x, gameRegion.y
 				}
 				
 			}
@@ -1855,7 +1878,7 @@ namespace Editor {
 			if (ImGui::Selectable("   Particle System")) {
 
 				if (ParticleSystem* particleSystemComp = selectedEntity->addComponent<ParticleSystem>()) {
-					particleSystemComp->init();
+					particleSystemComp->start();
 				}
 				//else
 				//	statusMessage = "There is existing component in the same type!";
@@ -1890,7 +1913,7 @@ namespace Editor {
 				//	terrainComp->init(&editor->fileSystem->materials["Default"]);
 
 				if (Terrain* terrainComp = selectedEntity->addComponent<Terrain>()) {
-					terrainComp->init();
+					terrainComp->start();
 				}
 			}
 
@@ -2206,6 +2229,7 @@ namespace Editor {
 		if (treeNodeOpen) {
 
 			//ImGui::Image((ImTextureID)comp->elevationMapTexture, ImVec2(128, 128), uv0, uv1, tint_col, border_col);
+			ImGui::DragFloat("##0", &comp->displacementMapScale, 0.01f, 0.0f, 3.0f, "%.2f");
 
 			ImGui::TreePop();
 		}
@@ -2303,6 +2327,56 @@ namespace Editor {
 			delete[] fovAxis;
 
 			ImGui::PopStyleColor();
+			ImGui::TreePop();
+		}
+
+		ImGui::Separator();
+	}
+
+	void Menu::showParticleSystemComponent(ParticleSystem* particleSystemComp, int index) {
+
+		float width = ImGui::GetContentRegionAvail().x;
+
+		ImGui::SetNextItemOpen(true);
+
+		char str[4] = { '#', '#', '0', '\0' };
+		char indexChar = '0' + index;
+		str[2] = indexChar;
+		bool treeNodeOpen = ImGui::TreeNode(str);
+
+		int frame_padding = 1;
+		ImVec2 size = ImVec2(16.0f, 16.0f);
+		ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+		ImVec2 uv1 = ImVec2(1.0f, 1.0f);
+		ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+		ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.0f);
+		ImVec4 bg_col = ImVec4(0.13f, 0.13f, 0.13f, 1.0f);
+
+		ImGui::SameLine(25);
+		ImGui::Image((ImTextureID)particleSystemTextureId, size, uv0, uv1, tint_col, border_col);
+		ImGui::SameLine();
+		ImGui::Text("  Particle System");
+
+		ImGui::SameLine();
+		ImVec2 pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(width - 20, pos.y));
+
+		if (ImGui::ImageButton((ImTextureID)contextMenuTextureId, size, uv0, uv1, frame_padding, bg_col, tint_col))
+			ImGui::OpenPopup("context_menu_popup");
+
+		Menu::contextMenuPopup(particleSystemComp, 0);
+
+		//if (EditorGUI::contextMenuPopup(ComponentType::GameCamera, 0)) {
+
+		//	ImGui::TreePop();
+		//	return;
+		//}
+
+		if (treeNodeOpen) {
+
+			//ImVec2 pos = ImGui::GetCursorPos();
+			//ImGui::SetCursorPos(ImVec2(pos.x, pos.y + 3));
+
 			ImGui::TreePop();
 		}
 
@@ -2615,6 +2689,10 @@ namespace Editor {
 
 		TextureFile::decodeTextureFile(width, height, image, "C:/Projects/Fury/Editor/resource/icons/camera.png");
 		Core::instance->glewContext->generateTexture(cameraTextureId, width, height, &image[0]);
+		image.clear();
+
+		TextureFile::decodeTextureFile(width, height, image, "C:/Projects/Fury/Editor/resource/icons/particlesystem.png");
+		Core::instance->glewContext->generateTexture(particleSystemTextureId, width, height, &image[0]);
 		image.clear();
 
 		TextureFile::decodeTextureFile(width, height, image, "C:/Projects/Fury/Editor/resource/icons/folder_opened_16.png");

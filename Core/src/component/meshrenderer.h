@@ -6,6 +6,7 @@
 
 namespace Fury {
 
+	class Entity;
 	class MeshFile;
 	class MaterialFile;
 
@@ -20,8 +21,10 @@ namespace Fury {
 		MeshFile* meshFile;
 		MaterialFile* materialFile;
 
-		MeshRenderer();
+		MeshRenderer(Entity* entity);
 		~MeshRenderer();
+		void start();
+		void update(float dt);
 		void setMeshFileOnLoad(MeshFile* meshFile);
 		void setMatFileOnLoad(MaterialFile* matFile);
 		void setMeshFile(File* file, MeshFile* meshFile);

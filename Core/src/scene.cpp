@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "scene.h"
+#include "component/particlesystem.h"
+#include "component/terrain.h"
 #include "core.h"
 
 // todo: better variable names;
@@ -12,7 +14,7 @@ namespace Fury {
 	}
 
 	Scene::Scene(std::string name) {
-		this->name = name;
+		//this->name = name;
 		Scene::newEntity("Root");
 	}
 
@@ -21,6 +23,32 @@ namespace Fury {
 			root->destroy();
 	}
 
+	void Scene::start() {
+
+	}
+
+	void Scene::update(float dt) {
+
+		std::stack<Entity*> entStack;
+		entStack.push(Core::instance->sceneManager->currentScene->root);
+
+		while (!entStack.empty()) {
+
+			Entity* popped = entStack.top();
+			entStack.pop();
+
+			Terrain* terrain = popped->getComponent<Terrain>();
+			if (terrain != NULL && primaryCamera != NULL)
+				terrain->update(dt);
+
+			ParticleSystem* particleSystem = popped->getComponent<ParticleSystem>();
+			if (particleSystem != NULL)
+				particleSystem->update(dt);
+
+			for (Transform*& child : popped->transform->children)
+				entStack.push(child->entity);
+		}
+	}
 	//Scene::Scene(std::string name) {
 	// find from file system and init scenegraph
 	//	//name = "SampleScene";
@@ -65,6 +93,6 @@ namespace Fury {
 
 	void Scene::backup() {
 		
-		rootBackup = Scene::duplicate(root);
+		//rootBackup = Scene::duplicate(root);
 	}
 }

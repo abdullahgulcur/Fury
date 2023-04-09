@@ -32,6 +32,8 @@ namespace Fury {
 		Transform(Entity* entity, Transform* parent);
 		Transform(Entity* entity, Transform* transform, Transform* parent);
 		~Transform();
+		void start();
+		void update(float dt);
 		void updateTransform();
 		void updateTransformUsingGuizmo();
 		glm::mat4 getLocalModelMatrix();

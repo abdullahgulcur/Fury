@@ -6,6 +6,10 @@
 #include "gizmo.h"
 #include "renderer.h"
 
+//namespace Fury {
+//	class Renderer;
+//}
+
 using namespace Fury;
 
 namespace Editor {
@@ -20,7 +24,7 @@ namespace Editor {
 		Menu* menu = NULL;
 		SceneCamera* sceneCamera = NULL; // mevcutta preogram acilir acilmaz baslatiliyor. Scenefile actiginda acmali
 		//Gizmo* gizmo = NULL;
-		Renderer* renderer = NULL;
+		//Renderer* renderer = NULL;
 		static Editor* instance;
 
 		Editor();

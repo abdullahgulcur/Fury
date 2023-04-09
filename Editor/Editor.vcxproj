@@ -194,7 +194,6 @@
     <ClInclude Include="src\include\imgui\imstb_textedit.h" />
     <ClInclude Include="src\include\imgui\imstb_truetype.h" />
     <ClInclude Include="src\menu.h" />
-    <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\scenecamera.h" />
   </ItemGroup>
   <ItemGroup>
@@ -218,7 +217,6 @@
     <ClCompile Include="src\include\imgui\imgui_tables.cpp" />
     <ClCompile Include="src\include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\menu.cpp" />
-    <ClCompile Include="src\renderer.cpp" />
     <ClCompile Include="src\scenecamera.cpp" />
   </ItemGroup>
   <ItemGroup>

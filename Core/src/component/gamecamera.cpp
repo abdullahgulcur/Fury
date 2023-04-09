@@ -35,7 +35,7 @@
 
 namespace Fury {
 
-	GameCamera::GameCamera() {}
+	GameCamera::GameCamera(Entity* entity) : Component(entity) {}
 
     GameCamera::~GameCamera() {
 
@@ -49,30 +49,39 @@ namespace Fury {
         Core::instance->sceneManager->currentScene->primaryCamera = NULL;
     }
 
-    void GameCamera::init(Transform* transform, int sizeX, int sizeY) {
+    void GameCamera::start() {
 
-        this->width = sizeX;
-        this->height = sizeY;
-        this->aspectRatio = (float)sizeX / sizeY;
+    }
+
+    void GameCamera::update(float dt) {
+
+    }
+
+    void GameCamera::init(Transform* transform) { //, int sizeX, int sizeY
+
+        //this->width = sizeX;
+        //this->height = sizeY;
+        /*this->aspectRatio = (float)sizeX / sizeY;*/
+        this->aspectRatio = (float)width/ height;
         GameCamera::setMatrices(transform);
         GameCamera::frustum(projectionViewMatrix);
         GameCamera::createEditorGizmos();
         GameCamera::createFBO();
     }
 
-    void GameCamera::setResolution(int sizeX, int sizeY) {
+    void GameCamera::setResolution() { //int sizeX, int sizeY
 
-        this->width = sizeX;
-        this->height = sizeY;
-        this->aspectRatio = (float)sizeX / sizeY;
+        //this->width = sizeX;
+        //this->height = sizeY;
+        this->aspectRatio = (float)width / height;
         GameCamera::updateProjectionMatrix();
     }
 
-    void GameCamera::resetResolution(int sizeX, int sizeY) {
+    void GameCamera::resetResolution() { //int sizeX, int sizeY
 
-        this->width = sizeX;
-        this->height = sizeY;
-        this->aspectRatio = (float)sizeX / sizeY;
+        /*this->width = sizeX;
+        this->height = sizeY;*/
+        this->aspectRatio = (float)width / height;
         GameCamera::updateProjectionMatrix();
         GameCamera::recreateFBO();
         GameCamera::updateEditorGizmos();

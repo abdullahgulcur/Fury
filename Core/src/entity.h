@@ -53,7 +53,7 @@ namespace Fury {
 				return nullptr;
 			}
 
-			T* newcomp = new T;
+			T* newcomp = new T(this);
 			Component* compToAdd = dynamic_cast<Component*>(newcomp);
 			//compToAdd->transform = transform;
 			components.push_back(compToAdd);

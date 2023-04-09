@@ -5,6 +5,8 @@
 
 namespace Fury {
 
+	class Entity;
+
 	struct __declspec(dllexport) Particle {
 
 		glm::vec3 position;
@@ -30,11 +32,11 @@ namespace Fury {
 
 		std::vector<Particle> particles;
 
-		ParticleSystem();
+		ParticleSystem(Entity* entity);
 		~ParticleSystem();
-		void init();
+		void start();
+		void update(float dt);
 		void initBillboardVAO();
-		void onUpdate(float dt);
 		void onDraw(glm::mat4& pv, glm::vec3& pos);
 	};
 }

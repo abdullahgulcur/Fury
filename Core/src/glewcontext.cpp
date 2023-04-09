@@ -37,8 +37,12 @@ namespace Fury {
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
 		glEnable(GL_CULL_FACE);
+		glEnable(GL_MULTISAMPLE);
 		// enable seamless cubemap sampling for lower mip levels in the pre-filter map.
 		//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+		int maxArrayTextureSize;
+		glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxArrayTextureSize);
+		std::cout << maxArrayTextureSize << std::endl;
 	}
 
 	unsigned int GlewContext::loadShaders(const char* vertex_file_path, const char* fragment_file_path) {

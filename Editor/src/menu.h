@@ -27,6 +27,7 @@ namespace Fury {
 	class SceneFile;
 	class Terrain;
 	class GameCamera;
+	class ParticleSystem;
 }
 
 using namespace Fury;
@@ -52,6 +53,7 @@ namespace Editor {
 		unsigned int meshRendererTextureId;
 		unsigned int transformTextureId;
 		unsigned int cameraTextureId;
+		unsigned int particleSystemTextureId;
 
 		Entity* holdedEntity = NULL;
 		Entity* coloredEntity = NULL;
@@ -146,6 +148,7 @@ namespace Editor {
 		void showMeshRendererComponent(int index, MeshRenderer* comp);
 		void showTerrainComponent(int index, Terrain* comp);
 		void showGameCameraComponent(GameCamera* camComp, int index);
+		void showParticleSystemComponent(ParticleSystem* particleSystemComp, int index);
 
 		void showMaterialProperties(int index, MaterialFile* mat);
 		void showTextureProperties();

@@ -25,6 +25,7 @@ namespace Fury {
 		void init();
 		void loadScene(std::string sceneName);
 		void renameCurrentScene(std::string sceneName);
+		void renameScene(std::string oldSceneName, std::string newSceneName);
 		File* getActiveSceneFile();
 		void restartCurrentScene();
 		void deleteScene(std::string sceneName);

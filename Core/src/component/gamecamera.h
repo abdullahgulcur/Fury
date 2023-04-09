@@ -40,6 +40,7 @@
 namespace Fury {
 
 	class Transform;
+	class Entity;
 
 	class __declspec(dllexport) GameCamera : public Component {
 
@@ -73,11 +74,13 @@ namespace Fury {
 		unsigned int gizmoVAO;
 		unsigned int gizmoShaderProgramID;
 
-		GameCamera();
+		GameCamera(Entity* entity);
 		~GameCamera();
-		void setResolution(int sizeX, int sizeY);
-		void resetResolution(int sizeX, int sizeY);
-		void init(Transform* transform, int sizeX, int sizeY);
+		void start();
+		void update(float dt);
+		void setResolution();//int sizeX, int sizeY
+		void resetResolution();//int sizeX, int sizeY
+		void init(Transform* transform); //, int sizeX, int sizeY
 		void setMatrices(Transform* transform);
 		void createFBO();
 		void recreateFBO();

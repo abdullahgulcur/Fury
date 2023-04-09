@@ -90,9 +90,7 @@ void main()
     // material properties
     vec3 albedo = pow(texture(texture0, TexCoords).rgb, vec3(2.2));
     float metallic = texture(texture2, TexCoords).r;
-    //metallic += (1 - metallic) * 0.75f;
     float roughness = texture(texture3, TexCoords).r;
-    roughness = 1 - roughness;
     float ao = texture(texture4, TexCoords).r;
        
     // input lighting data

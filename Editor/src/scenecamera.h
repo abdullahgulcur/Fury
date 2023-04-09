@@ -27,15 +27,15 @@ namespace Editor {
 
 	private:
 
-		//float rotationSpeed = 0.02;
-		//float translationSpeed = 1000;
-		//float scrollSpeed = 500;
-		//float generalSpeed = 0.3f;
-
 		float rotationSpeed = 0.02;
-		float translationSpeed = 10;
-		float scrollSpeed = 5;
+		float translationSpeed = 1000;
+		float scrollSpeed = 500;
 		float generalSpeed = 0.3f;
+
+		//float rotationSpeed = 0.02;
+		//float translationSpeed = 10;
+		//float scrollSpeed = 5;
+		//float generalSpeed = 0.3f;
 
 		UINT16 controlFlags;
 
@@ -64,6 +64,9 @@ namespace Editor {
 		float horizontalAngle = 0.f;
 		float verticalAngle = 0.f;
 		glm::vec3 position = glm::vec3(0, 0, -5);
+
+		unsigned int width;
+		unsigned int height;
 
 		SceneCamera();
 		void init();
