@@ -82,7 +82,8 @@ namespace Fury {
 		unsigned char** heights;
 		unsigned char** mipStack;
 
-		float displacementMapScale = 1.5f;
+		float displacementMapScale = 0.18f;
+		glm::vec3 lightDir;
 		
 		Terrain(Entity* entity);
 		~Terrain();

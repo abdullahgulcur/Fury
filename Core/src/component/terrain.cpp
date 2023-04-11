@@ -44,7 +44,7 @@ namespace Fury {
 
 	void Terrain::start() {
 
-
+		lightDir = glm::vec3(-1.f, -0.26, -0.55f);
 		GameCamera* camera = Core::instance->sceneManager->currentScene->primaryCamera;
 		//glm::vec3 camPos = camera->entity->transform->getGlobalPosition();
 
@@ -203,6 +203,7 @@ namespace Fury {
 		glew->uniform3fv(glew->getUniformLocation(programID, "camPoss"), 1, &test[0]);
 		glew->uniform1f(glew->getUniformLocation(programID, "texSize"), (float)TILE_SIZE * MEM_TILE_ONE_SIDE);
 		glew->uniform1f(glew->getUniformLocation(programID, "heightScale"), -displacementMapScale);
+		glew->uniform3f(glew->getUniformLocation(programID, "lightDirection"), lightDir.x, lightDir.y, lightDir.z);
 
 		// bind pre-computed IBL data
 		glew->activeTexture(GL_TEXTURE0);
@@ -242,7 +243,7 @@ namespace Fury {
 				AABB_Box aabb = blockAABBs[i * 12 + j];
 				startInWorldSpace = aabb.start;
 				endInWorldSpace = aabb.end;
-			//	if (camera->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
+				if (camera->intersectsAABB(startInWorldSpace, endInWorldSpace)) {
 
 					TerrainVertexAttribs attribs;
 					attribs.level = i;
@@ -251,7 +252,7 @@ namespace Fury {
 					glm::ivec2 clipmapcenter = Terrain::getClipmapPosition(i, test);
 					attribs.clipmapcenter = clipmapcenter;
 					instanceArray.push_back(attribs);
-			//	}
+				}
 			}
 		}
 
@@ -931,7 +932,8 @@ namespace Fury {
 		unsigned char* normalMaps = new unsigned char[512 * 512 * 4 * 8];
 		unsigned char* maskMaps = new unsigned char[512 * 512 * 4 * 8];
 
-		albedoTexturePaths[0] = "temp/moss_0_a.png";
+		albedoTexturePaths[0] = "temp/brick_rustic_a.png";
+		//albedoTexturePaths[0] = "temp/moss_0_a.png";
 		albedoTexturePaths[1] = "temp/moss_2_a.png";
 		albedoTexturePaths[2] = "temp/mud_wet_a.png";
 		albedoTexturePaths[3] = "temp/mud_cracked_a.png";
@@ -940,7 +942,8 @@ namespace Fury {
 		albedoTexturePaths[6] = "temp/cliff_volcanic_a.png";
 		albedoTexturePaths[7] = "temp/cliff_granite_a.png";
 
-		normalTexturePaths[0] = "temp/moss_0_n.png";
+		normalTexturePaths[0] = "temp/brick_rustic_n.png";
+		//normalTexturePaths[0] = "temp/moss_0_n.png";
 		normalTexturePaths[1] = "temp/moss_2_n.png";
 		normalTexturePaths[2] = "temp/mud_wet_n.png";
 		normalTexturePaths[3] = "temp/mud_cracked_n.png";
@@ -949,7 +952,8 @@ namespace Fury {
 		normalTexturePaths[6] = "temp/cliff_volcanic_n.png";
 		normalTexturePaths[7] = "temp/cliff_granite_n.png";
 
-		roughnessTexturePaths[0] = "temp/moss_0_r.png";
+		roughnessTexturePaths[0] = "temp/brick_rustic_r.png";
+		//roughnessTexturePaths[0] = "temp/moss_0_r.png";
 		roughnessTexturePaths[1] = "temp/moss_2_r.png";
 		roughnessTexturePaths[2] = "temp/mud_wet_r.png";
 		roughnessTexturePaths[3] = "temp/mud_cracked_r.png";
@@ -958,7 +962,8 @@ namespace Fury {
 		roughnessTexturePaths[6] = "temp/cliff_volcanic_r.png";
 		roughnessTexturePaths[7] = "temp/cliff_granite_r.png";
 
-		aoTexturePaths[0] = "temp/moss_0_ao.png";
+		aoTexturePaths[0] = "temp/brick_rustic_ao.png";
+		//aoTexturePaths[0] = "temp/moss_0_ao.png";
 		aoTexturePaths[1] = "temp/moss_2_ao.png";
 		aoTexturePaths[2] = "temp/mud_wet_ao.png";
 		aoTexturePaths[3] = "temp/mud_cracked_ao.png";
@@ -967,7 +972,8 @@ namespace Fury {
 		aoTexturePaths[6] = "temp/cliff_volcanic_ao.png";
 		aoTexturePaths[7] = "temp/cliff_granite_ao.png";
 
-		heightTexturePaths[0] = "temp/moss_0_h.png";
+		heightTexturePaths[0] = "temp/brick_rustic_h.png";
+		//heightTexturePaths[0] = "temp/moss_0_h.png";
 		heightTexturePaths[1] = "temp/moss_2_h.png";
 		heightTexturePaths[2] = "temp/mud_wet_h.png";
 		heightTexturePaths[3] = "temp/mud_cracked_h.png";

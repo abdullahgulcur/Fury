@@ -53,20 +53,20 @@ namespace Fury {
 		sceneManager->currentScene->update(dt);
 
 		// RENDERING SECTION
-		GameCamera* camera = sceneManager->currentScene->primaryCamera;
-		CameraInfo cameraInfo;
-		cameraInfo.FBO = camera->FBO;
-		cameraInfo.VP = camera->projectionViewMatrix;
-		cameraInfo.projection = camera->projectionMatrix;
-		cameraInfo.view = camera->viewMatrix;
-		cameraInfo.camPos = camera->position;
-		cameraInfo.width = camera->width;
-		cameraInfo.height = camera->height;
-		for(int i = 0; i < 6; i++)
-			cameraInfo.planes[i] = camera->planes[i];
+		//GameCamera* camera = sceneManager->currentScene->primaryCamera;
+		//CameraInfo cameraInfo;
+		//cameraInfo.FBO = camera->FBO;
+		//cameraInfo.VP = camera->projectionViewMatrix;
+		//cameraInfo.projection = camera->projectionMatrix;
+		//cameraInfo.view = camera->viewMatrix;
+		//cameraInfo.camPos = camera->position;
+		//cameraInfo.width = camera->width;
+		//cameraInfo.height = camera->height;
+		//for(int i = 0; i < 6; i++)
+		//	cameraInfo.planes[i] = camera->planes[i];
 
-		Core::instance->renderer->cameraInfo = cameraInfo;
-		renderer->update(dt);
+		//Core::instance->renderer->cameraInfo = cameraInfo;
+		//renderer->update(dt);
 	}
 
 	float Core::getCurrentTime() {

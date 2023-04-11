@@ -87,7 +87,7 @@ namespace Fury {
             Terrain* terrain = popped->getComponent<Terrain>();
             if (terrain != NULL && scene->primaryCamera != NULL) {
 
-                //glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+               // glew->polygonMode(GL_FRONT_AND_BACK, GL_LINE);
                 terrain->onDraw(cameraInfo.VP, cameraInfo.camPos);
             }
 

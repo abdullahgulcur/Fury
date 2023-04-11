@@ -13,13 +13,14 @@ in vec2 TexCoords;
 in mat3 TBN;
 in vec3 TangentViewPos;
 in vec3 TangentFragPos;
+in float Scale;
 //in Test Wow;
 
 out vec4 FragColor;
 
 //uniform vec3 color_d;
 uniform vec3 camPos;
-
+uniform vec3 lightDirection;
 // material parameters
 //uniform sampler2D texture0;
 //uniform sampler2D texture1;
@@ -41,22 +42,22 @@ uniform sampler2DArray albedoArray;
 uniform sampler2DArray normalArray;
 uniform sampler2DArray maskArray;
 
-//vec3 getNormalFromMap(vec3 normal)
-//{
-//    //vec3 tangentNormal = texture(texture1, TexCoords).xyz * 2.0 - 1.0;
-//
-////    vec3 Q1  = dFdx(WorldPos);
-////    vec3 Q2  = dFdy(WorldPos);
-////    vec2 st1 = dFdx(texCoords);
-////    vec2 st2 = dFdy(texCoords);
-////
-////    vec3 N   = normalize(Normal);
-////    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
-////    vec3 B  = -normalize(cross(N, T));
-////    mat3 TBN = mat3(T, B, N);
-//
-//    return normalize(TBN * tangentNormal);
-//}
+vec3 getNormalFromMap()
+{
+    vec3 tangentNormal = texture(normalArray, vec3(TexCoords.xy, 5)).xyz * 2.0 - 1.0;
+
+    vec3 Q1  = dFdx(WorldPos);
+    vec3 Q2  = dFdy(WorldPos);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
+
+    vec3 N   = normalize(Normal);
+    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
+    vec3 B  = -normalize(cross(N, T));
+    mat3 TBN1 = mat3(T, B, N);
+
+    return normalize(TBN1 * tangentNormal);
+}
 
 //////vec3 getNormalFromMap(vec2 texCoords)
 //////{
@@ -110,12 +111,14 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 } 
 
-//#define parallax_occlusion
+#define parallax_occlusion
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir, float depth)
 {  
 #ifndef parallax_occlusion
     return texCoords - viewDir.xy * (depth * heightScale);        
 #else      
+
+    int index = 3;
     // number of depth layers
     const float minLayers = 8;
     const float maxLayers = 32;
@@ -130,14 +133,14 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir, float depth)
   
     // get initial values
     vec2  currentTexCoords     = texCoords;
-    float currentDepthMapValue = texture(maskArray, vec3(currentTexCoords.xy, 7)).a;
+    float currentDepthMapValue = texture(maskArray, vec3(currentTexCoords.xy, index)).a;
       
     while(currentLayerDepth < currentDepthMapValue)
     {
         // shift texture coordinates along direction of P
         currentTexCoords -= deltaTexCoords;
         // get depthmap value at current texture coordinates
-        currentDepthMapValue = texture(maskArray, vec3(currentTexCoords.xy, 7)).a;  
+        currentDepthMapValue = texture(maskArray, vec3(currentTexCoords.xy, index)).a;  
         
         // get depth of next layer
         currentLayerDepth += layerDepth;  
@@ -149,7 +152,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir, float depth)
     // get depth after and before collision for linear interpolation
     float afterDepth  = currentDepthMapValue - currentLayerDepth;
     
-    float beforeDepth = texture(maskArray, vec3(prevTexCoords.xy, 7)).a - currentLayerDepth + layerDepth;
+    float beforeDepth = texture(maskArray, vec3(prevTexCoords.xy, index)).a - currentLayerDepth + layerDepth;
  
     // interpolation of texture coordinates
     float weight = afterDepth / (afterDepth - beforeDepth);
@@ -173,23 +176,25 @@ void main(){
 //    float metallic = 0.1f;//texture(texture2, texCoords).r;
 //    float roughness = 0.9f;//texture(texture3, texCoords).r;
 //    float ao = 1.0f;//texture(texture4, texCoords).r;
-    int index = int(Normal.y * 10);
-    float height = texture(maskArray, vec3(TexCoords.xy, index)).a;
+    int index = 3;
+    vec2 uv = TexCoords/(Scale);
+    float height = texture(maskArray, vec3(uv, index)).a;
 
     // offset texture coordinates with Parallax Mapping
     vec3 viewDir = normalize(TangentViewPos - TangentFragPos);
-    vec2 texCoords = ParallaxMapping(TexCoords, viewDir, height);
+    vec2 texCoords = ParallaxMapping(uv, viewDir, height);
 
-    vec3 albedo = pow(texture(albedoArray, vec3(texCoords.xy, index)).rgb, vec3(2.2));
-    vec3 normal = texture(normalArray, vec3(texCoords.xy, index)).rgb * 2.0 - 1.0;;
+    vec3 albedo = pow(texture(albedoArray, vec3(texCoords.xy, index)).rgb, vec3(2.2)); //vec3(1,1,1);
+    vec3 normal = texture(normalArray, vec3(texCoords.xy, index)).rgb * 2.0 - 1.0; //getNormalFromMap();//
     vec3 mask = texture(maskArray, vec3(texCoords.xy, index)).rgb;
 
-    float metallic = mask.r;
-    float roughness = mask.g;
-    float ao = mask.b;
+    float metallic = mask.r; //0.1f;
+    float roughness = mask.g; //0.9f;
+    float ao = mask.b; //0.3f;
 
     // input lighting data
-    vec3 N = TBN * normalize(normal);
+    vec3 N = TBN * normal;
+   // vec3 N = getNormalFromMap();//TBN * normalize(normal);//Normal;//TBN * vec3(0,0,1);// normalize(normal);//normal;//
     vec3 V = normalize(camPos - WorldPos);
     vec3 R = reflect(-V, N); 
 
@@ -202,10 +207,10 @@ void main(){
     vec3 Lo = vec3(0.0);
 
     // calculate per-light radiance
-    vec3 lightDir = vec3(1.f, -1.f, -1.f);
+    vec3 lightDir = lightDirection;//vec3(1.f, -1.f, 1.f);
     vec3 L = normalize(-lightDir);
     vec3 H = normalize(V + L);
-    float lightPow = 3.f;
+    float lightPow = 5.f;
     vec3 radiance = vec3(lightPow);
 
     // Cook-Torrance BRDF
@@ -258,6 +263,6 @@ void main(){
     color = color / (color + vec3(1.0));
     // gamma correct
     color = pow(color, vec3(1.0/2.2));
-    //color *= ao;
-    FragColor = vec4(color, 1.f);;
+    color *= ao;
+    FragColor = vec4(color, 1.f);
 }

@@ -2228,8 +2228,11 @@ namespace Editor {
 
 		if (treeNodeOpen) {
 
-			//ImGui::Image((ImTextureID)comp->elevationMapTexture, ImVec2(128, 128), uv0, uv1, tint_col, border_col);
-			ImGui::DragFloat("##0", &comp->displacementMapScale, 0.01f, 0.0f, 3.0f, "%.2f");
+			ImGui::DragFloat("##0", &comp->displacementMapScale, 0.01f, 0.0f, 10.0f, "%.2f");
+
+			ImGui::DragFloat("##1", &comp->lightDir.x, 0.01f, -1.0f, 1.0f, "%.2f");
+			ImGui::DragFloat("##2", &comp->lightDir.y, 0.01f, -1.0f, 1.0f, "%.2f");
+			ImGui::DragFloat("##3", &comp->lightDir.z, 0.01f, -1.0f, 1.0f, "%.2f");
 
 			ImGui::TreePop();
 		}
